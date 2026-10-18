@@ -1,0 +1,3 @@
+# dsh-cockpit
+
+Initializing repository.
