@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Cockpit · DeepSeek Harness</title>
+<meta name="description" content="Cockpit · DeepSeek Harness 的实时指挥台：编队、任务板、活动流一屏尽览。">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8ff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1020">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<script>
+/* Resolve the host theme before first paint: same-origin workspace theme, else OS preference. */
+(function () {
+  var theme = null;
+  try {
+    var parentWin = window.parent;
+    if (parentWin && parentWin !== window) {
+      var pdoc = parentWin.document;
+      var roots = [pdoc.documentElement, pdoc.body];
+      for (var i = 0; i < roots.length && !theme; i++) {
+        var el = roots[i];
+        if (!el) continue;
+        var val = el.getAttribute && (el.getAttribute('data-theme') || el.getAttribute('data-color-mode') ||
+          el.getAttribute('data-mode') || el.getAttribute('data-bs-theme'));
+        if (val && /dark|night|夜/i.test(val)) theme = 'dark';
+        else if (val && /light|day|日/i.test(val)) theme = 'light';
+        if (!theme && el.classList) {
+          if (el.classList.contains('dark') || el.classList.contains('theme-dark')) theme = 'dark';
+          else if (el.classList.contains('light') || el.classList.contains('theme-light')) theme = 'light';
+        }
+      }
+      if (!theme) {
+        var scheme = parentWin.getComputedStyle(pdoc.documentElement).colorScheme || '';
+        if (/dark/i.test(scheme)) theme = 'dark';
+        else if (/light/i.test(scheme)) theme = 'light';
+      }
+    }
+    if (!theme && window.matchMedia) {
+      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+  } catch (err) { /* cross-origin parent: fall back to the OS preference */ }
+  theme = theme || 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.style.colorScheme = theme;
+})();
+</script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<svg class="ocean" viewBox="0 0 1600 420" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+  <path d="M0 250 C 240 200 420 300 660 260 C 900 220 1040 300 1290 255 C 1440 228 1540 250 1600 235 L1600 420 L0 420Z" fill="#D7E3FF" opacity=".55"/>
+  <path d="M0 300 C 260 258 470 340 720 300 C 980 258 1120 330 1380 292 C 1500 274 1560 286 1600 278 L1600 420 L0 420Z" fill="#CFDEFF" opacity=".45"/>
+  <path d="M0 352 C 300 322 520 380 800 348 C 1060 318 1240 372 1600 334 L1600 420 L0 420Z" fill="#C7D8FF" opacity=".4"/>
+</svg>
+<div class="grain" aria-hidden="true"></div>
+
+<div id="app"></div>
+<div id="compose-layer" class="compose-layer" hidden></div>
+<div id="pair-layer" class="pair-layer" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <p class="noscript">Cockpit 需要启用 JavaScript 才能连接实时指挥台。</p>
+</noscript>
+
+<script src="./app.js" defer></script>
+</body>
+</html>

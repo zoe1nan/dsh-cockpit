@@ -1,0 +1,465 @@
+{
+  "ok": true,
+  "plugin": "dsh-cockpit",
+  "now": 1792328280888,
+  "mode": "desktop",
+  "session": {
+    "id": "sess-lead",
+    "title": "认证模块重构",
+    "running": true,
+    "turn": 12,
+    "startedAt": 1792325760888,
+    "elapsedMs": 2520000,
+    "percent": 60,
+    "completed": 3,
+    "total": 5,
+    "plan": {
+      "steps": [
+        {
+          "text": "梳理现有认证流程",
+          "status": "completed"
+        },
+        {
+          "text": "重构 session 校验逻辑",
+          "status": "completed"
+        },
+        {
+          "text": "登录页表单与校验",
+          "status": "completed"
+        },
+        {
+          "text": "补齐 e2e 登录用例",
+          "status": "in_progress"
+        },
+        {
+          "text": "清理旧版 session 中间件",
+          "status": "pending"
+        }
+      ]
+    },
+    "stats": {
+      "turns": 12,
+      "steps": 31,
+      "llmMs": 274000,
+      "toolMs": 96000,
+      "tokens": 12800
+    },
+    "model": "V4 Pro",
+    "live": true,
+    "lastAt": 1792328250888
+  },
+  "team": {
+    "members": [
+      {
+        "id": "sess-lead",
+        "name": "lead",
+        "role": "lead",
+        "phase": "active",
+        "model": "V4 Pro",
+        "status": "running",
+        "running": true,
+        "tokens": 12400,
+        "current": "正在把 #4 派给测试代理",
+        "lastAt": 1792328220888,
+        "sessionId": "sess-lead",
+        "live": true,
+        "focus": "认证模块重构 · web/src/session/validate.ts · web/src/api/client.ts"
+      },
+      {
+        "id": "sess-frontend",
+        "name": "frontend",
+        "role": "teammate",
+        "phase": "active",
+        "model": "V4 Flash",
+        "status": "running",
+        "running": true,
+        "tokens": 8100,
+        "current": "编辑 web/src/Auth.tsx · +38 −6",
+        "lastAt": 1792328160888,
+        "sessionId": "sess-2",
+        "live": true,
+        "focus": "登录页表单 · 深色模式"
+      },
+      {
+        "id": "sess-backend",
+        "name": "backend",
+        "role": "teammate",
+        "phase": "active",
+        "model": "V4 Flash",
+        "status": "idle",
+        "running": false,
+        "tokens": 9600,
+        "current": "",
+        "lastAt": 1792328100888,
+        "sessionId": "sess-3",
+        "live": true,
+        "focus": "鉴权接口 · 会话校验"
+      },
+      {
+        "id": "sess-tester",
+        "name": "tester",
+        "role": "teammate",
+        "phase": "active",
+        "model": "V4 Flash",
+        "status": "idle",
+        "running": false,
+        "tokens": 1200,
+        "current": "空闲 · 等待 #2 完成",
+        "lastAt": 1792328040888,
+        "sessionId": "sess-4",
+        "live": true,
+        "focus": "回归测试用例"
+      },
+      {
+        "id": "sess-docs",
+        "name": "docs",
+        "role": "teammate",
+        "phase": "active",
+        "running": false,
+        "sessionId": "sess-docs",
+        "live": true,
+        "model": "deepseek-v4-flash",
+        "tokens": 0,
+        "current": "",
+        "lastAt": 1792327980888,
+        "avatar": "blue",
+        "status": "idle"
+      },
+      {
+        "id": "sess-qa",
+        "name": "reviewer",
+        "role": "teammate",
+        "phase": "failed",
+        "running": false,
+        "sessionId": "sess-qa",
+        "live": false,
+        "model": "deepseek-v4-flash",
+        "tokens": 0,
+        "current": "启动失败",
+        "lastAt": 1792327920888,
+        "avatar": "orange",
+        "status": "failed"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "t1",
+        "revision": 3,
+        "subject": "重构 session 校验逻辑",
+        "status": "in_progress",
+        "owner": "sess-backend",
+        "ownerName": "backend",
+        "blockedBy": [],
+        "writeScopes": [
+          "server/session.ts",
+          "mw/auth.ts"
+        ],
+        "ready": true,
+        "warnings": [
+          "与前端共享 web/src/api/client.ts"
+        ]
+      },
+      {
+        "id": "t2",
+        "revision": 2,
+        "subject": "登录页表单与校验",
+        "status": "in_progress",
+        "owner": "sess-frontend",
+        "ownerName": "frontend",
+        "blockedBy": [],
+        "writeScopes": [
+          "web/src/Auth.tsx",
+          "web/src/api/client.ts"
+        ],
+        "ready": true,
+        "warnings": []
+      },
+      {
+        "id": "t3",
+        "revision": 1,
+        "subject": "补齐 e2e 登录用例",
+        "status": "pending",
+        "owner": "sess-tester",
+        "ownerName": "tester",
+        "blockedBy": [
+          "t2"
+        ],
+        "writeScopes": [
+          "e2e/login.spec.ts"
+        ],
+        "ready": false,
+        "warnings": []
+      },
+      {
+        "id": "t4",
+        "revision": 1,
+        "subject": "清理旧版 session 中间件",
+        "status": "pending",
+        "owner": "sess-backend",
+        "ownerName": "backend",
+        "blockedBy": [],
+        "writeScopes": [
+          "server/mw/"
+        ],
+        "ready": true,
+        "warnings": []
+      },
+      {
+        "id": "t5",
+        "revision": 2,
+        "subject": "梳理现有认证流程",
+        "status": "completed",
+        "owner": "sess-lead",
+        "ownerName": "lead",
+        "blockedBy": [],
+        "writeScopes": [
+          "docs/auth.md"
+        ],
+        "ready": true,
+        "warnings": []
+      }
+    ]
+  },
+  "sessions": [
+    {
+      "id": "sess-lead",
+      "title": "认证模块重构",
+      "running": true,
+      "percent": 60,
+      "lastAt": 1792328190888,
+      "live": true
+    },
+    {
+      "id": "sess-2",
+      "title": "登录页动效",
+      "running": false,
+      "percent": 33,
+      "lastAt": 1792328100888,
+      "live": true
+    },
+    {
+      "id": "sess-3",
+      "title": "文档站迁移",
+      "running": false,
+      "percent": null,
+      "lastAt": 1792328010888,
+      "live": true
+    },
+    {
+      "id": "sess-4",
+      "title": "回归测试用例",
+      "running": false,
+      "lastAt": 1792327920888,
+      "percent": null,
+      "total": 0,
+      "completed": 0,
+      "live": true
+    }
+  ],
+  "activity": [
+    {
+      "at": 1792328235888,
+      "kind": "tool",
+      "agent": "lead",
+      "agentId": "sess-lead",
+      "text": "运行命令",
+      "detail": "cd ~/work/demo-app && node tests/drive.mjs --scenario long-content"
+    },
+    {
+      "at": 1792328190888,
+      "kind": "tool",
+      "agent": "阿码",
+      "agentId": "sess-backend",
+      "text": "运行命令",
+      "detail": "pnpm test --filter auth --reporter=verbose"
+    },
+    {
+      "at": 1792328145888,
+      "kind": "tool",
+      "agent": "小鲸",
+      "agentId": "sess-frontend",
+      "text": "编辑文件",
+      "detail": "web/src/Auth.tsx"
+    },
+    {
+      "at": 1792328100888,
+      "kind": "done",
+      "agent": "阿码",
+      "agentId": "sess-backend",
+      "text": "运行命令完成",
+      "detail": "1240 毫秒"
+    },
+    {
+      "at": 1792328055888,
+      "kind": "tool",
+      "agent": "小鲸",
+      "agentId": "sess-frontend",
+      "text": "读取文件",
+      "detail": "web/src/api/client.ts"
+    },
+    {
+      "at": 1792328010888,
+      "kind": "team",
+      "agent": "你",
+      "agentId": "sess-lead",
+      "text": "任务 t2 已完成：登录页表单与校验",
+      "detail": ""
+    },
+    {
+      "at": 1792327965888,
+      "kind": "message",
+      "agent": "小鲸",
+      "agentId": "sess-frontend",
+      "text": "表单校验和错误态已接上，等待后端接口联调",
+      "detail": ""
+    },
+    {
+      "at": 1792327920888,
+      "kind": "tool",
+      "agent": "阿码",
+      "agentId": "sess-backend",
+      "text": "搜索内容",
+      "detail": "auth|session"
+    },
+    {
+      "at": 1792327875888,
+      "kind": "team",
+      "agent": "你",
+      "agentId": "sess-lead",
+      "text": "成员 豆豆 上线",
+      "detail": ""
+    },
+    {
+      "at": 1792327830888,
+      "kind": "turn",
+      "agent": "你",
+      "agentId": "sess-lead",
+      "text": "开始第 12 轮",
+      "detail": ""
+    }
+  ],
+  "files": [
+    {
+      "path": "web/src/api/client.ts",
+      "agents": [
+        "frontend",
+        "backend"
+      ],
+      "conflict": true
+    }
+  ],
+  "approvals": [
+    {
+      "id": "apr-demo-1",
+      "sessionId": "sess-lead",
+      "sessionTitle": "认证模块重构",
+      "toolName": "ops_bash",
+      "label": "运行命令",
+      "callId": "call-demo-1",
+      "reason": "需要在工作区外写入 pnpm 依赖缓存",
+      "detail": "pnpm add -D vitest --store-dir ~/.pnpm-store",
+      "requestedAt": 1760000360000,
+      "expiresAt": 1760000385000
+    }
+  ],
+  "aliases": {
+    "sess-frontend": {
+      "name": "小鲸",
+      "color": "green",
+      "emoji": ""
+    },
+    "sess-backend": {
+      "name": "阿码",
+      "color": "violet",
+      "emoji": ""
+    },
+    "sess-tester": {
+      "name": "豆豆",
+      "color": "orange",
+      "emoji": ""
+    }
+  },
+  "version": "1.0.0",
+  "cards": [
+    {
+      "id": "git-status",
+      "title": "Git 状态",
+      "subtitle": "当前工作区",
+      "icon": "git",
+      "order": 10,
+      "actions": [
+        {
+          "id": "refresh",
+          "label": "刷新",
+          "style": "ghost"
+        }
+      ],
+      "payload": {
+        "kind": "list",
+        "items": [
+          {
+            "title": "feature/cockpit-v06",
+            "detail": "与远端同步",
+            "state": "ok"
+          },
+          {
+            "title": "server/session.ts",
+            "detail": "已修改 · +64 −12",
+            "state": "warn"
+          },
+          {
+            "title": "web/src/styles/auth.css",
+            "detail": "已暂存 · +24 −23",
+            "state": "idle"
+          }
+        ],
+        "footer": "3 个文件有改动 · 0 冲突"
+      },
+      "error": null,
+      "updatedAt": 0
+    },
+    {
+      "id": "test-run",
+      "title": "测试",
+      "subtitle": "本轮验证",
+      "icon": "test",
+      "order": 20,
+      "actions": [
+        {
+          "id": "run",
+          "label": "跑一遍",
+          "style": "primary"
+        },
+        {
+          "id": "fail",
+          "label": "制造失败",
+          "style": "danger",
+          "confirm": "把测试标记为失败？"
+        }
+      ],
+      "payload": {
+        "kind": "metrics",
+        "rows": [
+          {
+            "label": "通过",
+            "value": "42/42",
+            "tone": "ok"
+          },
+          {
+            "label": "耗时",
+            "value": "8.4s",
+            "tone": "idle"
+          },
+          {
+            "label": "覆盖",
+            "value": "87%",
+            "tone": "ok"
+          }
+        ],
+        "footer": "vitest · 3 个文件"
+      },
+      "error": null,
+      "updatedAt": 0
+    }
+  ]
+}

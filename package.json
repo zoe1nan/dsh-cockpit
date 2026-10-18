@@ -1,0 +1,59 @@
+{
+  "name": "dsh-cockpit",
+  "version": "1.0.0",
+  "description": "Live command deck for DeepSeek Harness agent teams: team roster, task board, approvals, write actions, desktop capsule, remote access.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "public/",
+    "mock/",
+    "scripts/",
+    "examples/",
+    "docs/STATE.md",
+    "README.md",
+    "LICENSE",
+    "capsule/"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "dashboard",
+    "agent-team",
+    "pwa",
+    "extension-api"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zoe1nan/dsh-cockpit"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "preview": "node scripts/preview.mjs"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "Cockpit · DeepSeek Harness 指挥台",
+  "short_name": "Cockpit",
+  "description": "DeepSeek Harness 的实时指挥台：编队、任务、审批与工具流。",
+  "id": "/cockpit/",
+  "start_url": "/cockpit/",
+  "scope": "/cockpit/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
+  "background_color": "#f5f8ff",
+  "theme_color": "#4d6bfe",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": ["developer", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "概览",
+      "short_name": "概览",
+      "url": "/cockpit/?tab=overview",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "任务",
+      "short_name": "任务",
+      "url": "/cockpit/?tab=tasks",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "设置",
+      "short_name": "设置",
+      "url": "/cockpit/?tab=settings",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

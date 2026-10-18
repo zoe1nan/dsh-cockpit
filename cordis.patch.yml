@@ -1,0 +1,12 @@
+# Cockpit — a live command deck for DeepSeek Harness.
+#
+# Host half reads the session projections the composition already computes
+# (todos / title / sessionStats / agentTeam / modelSelection) plus the committed
+# session event stream, then serves one SPA at /cockpit with a JSON snapshot,
+# an SSE change feed, and a display-only alias API.
+#
+# Read-only: the deck never writes back into DSH. Aliases are an overlay stored
+# in ~/.dsh/cockpit/aliases.json.
+- insert:
+    - id: dsh-cockpit
+      name: 'dsh-cockpit'
