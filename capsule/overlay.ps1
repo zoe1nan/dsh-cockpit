@@ -146,6 +146,22 @@ $capGlow.BorderThickness = New-Object System.Windows.Thickness(1.6)
 $capGlow.Margin = New-Object System.Windows.Thickness(-2)
 $capGlow.IsHitTestVisible = $false
 $root.Children.Insert(0, $capGlow) | Out-Null
+
+# v1.2 (A4): hover feedback. A soft veil lifts the capsule and a thin ring
+# traces its border; both fade in quickly and out a little slower, so the
+# capsule reacts to the pointer without looking like a button.
+$capHoverVeil = New-Object System.Windows.Controls.Border
+$capHoverVeil.CornerRadius = New-Object System.Windows.CornerRadius(29)
+$capHoverVeil.IsHitTestVisible = $false
+$capHoverVeil.Opacity = 0
+$root.Children.Add($capHoverVeil) | Out-Null
+$capHoverRing = New-Object System.Windows.Controls.Border
+$capHoverRing.CornerRadius = New-Object System.Windows.CornerRadius(29)
+$capHoverRing.BorderThickness = New-Object System.Windows.Thickness(1.6)
+$capHoverRing.Margin = New-Object System.Windows.Thickness(0)
+$capHoverRing.IsHitTestVisible = $false
+$capHoverRing.Opacity = 0
+$root.Children.Add($capHoverRing) | Out-Null
 $capGrid = New-Object System.Windows.Controls.Grid
 foreach ($width in @(58, -1, 66, 32)) {
   $col = New-Object System.Windows.Controls.ColumnDefinition
@@ -530,6 +546,10 @@ function Get-Palette([string]$theme) {
   $dark = @{
     capBg = New-Gradient @('#EE16244A','#F30C1428','#F6070C18') @(0,0.5,1) 0 0 0 1
     capBorder = New-Brush '#8FB0FF' 0.16
+    capHover = New-Brush '#C7DBFF' 0.62
+    capPending = New-Brush '#FFB648' 0.52
+    capPendingHover = New-Brush '#FFD08A' 0.82
+    hoverVeil = New-Brush '#FFFFFF' 0.07
 halo = New-Radial '#4D6BFE' 0.22
 capSheen = New-Gradient @('#38FFFFFF','#00FFFFFF') @(0,1) 0 0 0 1
     ring = New-Brush '#FFFFFF' 0.055
@@ -567,6 +587,10 @@ capSheen = New-Gradient @('#38FFFFFF','#00FFFFFF') @(0,1) 0 0 0 1
   $light = @{
     capBg = New-Gradient @('#F0FFFFFF','#F5F2F6FF','#F7EEF3FC') @(0,0.5,1) 0 0 0 1
     capBorder = New-Brush '#4D6BFE' 0.24
+    capHover = New-Brush '#4D6BFE' 0.55
+    capPending = New-Brush '#D97706' 0.55
+    capPendingHover = New-Brush '#E8890C' 0.85
+    hoverVeil = New-Brush '#4D6BFE' 0.05
 halo = New-Radial '#4D6BFE' 0.22
 capSheen = New-Gradient @('#8AFFFFFF','#00FFFFFF') @(0,1) 0 0 0 1
     ring = New-Brush '#203566' 0.075
@@ -628,7 +652,9 @@ $capSheen.Background = $p.capSheen
   $capSheen.BorderThickness = New-Object System.Windows.Thickness(1)
   $capGlow.BorderBrush = $p.rim
   $tankBloom.Fill = $p.bloom
-  $capsule.BorderBrush = $p.capBorder
+  $capHoverVeil.Background = $p.hoverVeil
+  $capsule.BorderBrush = if ($script:bridgeApprovals -gt 0) { $p.capPending } else { $p.capBorder }
+  $capHoverRing.BorderBrush = if ($script:bridgeApprovals -gt 0) { $p.capPendingHover } else { $p.capHover }
   $whaleHalo.Fill = $p.halo
   
   $tankWrap.Background = $p.tankBg
@@ -976,6 +1002,10 @@ $capsule.Add_MouseEnter({
     $readPct.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $anim)
     $anim2 = New-Object System.Windows.Media.Animation.DoubleAnimation(1, 0, [TimeSpan]::FromMilliseconds(160))
     $readSteps.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $anim2)
+    $veilIn = New-Object System.Windows.Media.Animation.DoubleAnimation(0, 1, [TimeSpan]::FromMilliseconds(140))
+    $capHoverVeil.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $veilIn)
+    $ringIn = New-Object System.Windows.Media.Animation.DoubleAnimation(0, 1, [TimeSpan]::FromMilliseconds(140))
+    $capHoverRing.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $ringIn)
   })
   $script:hoverTimer.Start()
 })
@@ -989,6 +1019,10 @@ $capsule.Add_MouseLeave({
     $readPct.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $anim)
     $anim2 = New-Object System.Windows.Media.Animation.DoubleAnimation(0, 1, [TimeSpan]::FromMilliseconds(200))
     $readSteps.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $anim2)
+    $veilOut = New-Object System.Windows.Media.Animation.DoubleAnimation(1, 0, [TimeSpan]::FromMilliseconds(180))
+    $capHoverVeil.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $veilOut)
+    $ringOut = New-Object System.Windows.Media.Animation.DoubleAnimation(1, 0, [TimeSpan]::FromMilliseconds(180))
+    $capHoverRing.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $ringOut)
   })
   $script:hoverTimer.Start()
 })
@@ -1273,6 +1307,13 @@ function Update-BridgeUi {
   $script:cockpitUrl = $url
   $script:bridgeRunning = $running
   $script:bridgeApprovals = $pending
+  # v1.2 (A4): pending approvals tint the resting border amber; the hover ring
+  # follows so hover stays readable in both states.
+  $palette = $script:palette
+  if ($palette.ContainsKey('capBorder')) {
+    $capsule.BorderBrush = if ($pending -gt 0) { $palette.capPending } else { $palette.capBorder }
+    $capHoverRing.BorderBrush = if ($pending -gt 0) { $palette.capPendingHover } else { $palette.capHover }
+  }
   if ($fresh) {
     $capsule.ToolTip = if ($pending -gt 0) { '有待审批 · 点击打开指挥台' } else { '点击打开指挥台' }
   } else {
