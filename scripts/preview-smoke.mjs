@@ -76,7 +76,7 @@ try {
   const state = await fetchJson('/cockpit/api/state')
   check('state 200', state.status === 200, `HTTP ${state.status}`)
   check('state ok', state.body?.ok === true)
-  check('state version', state.body?.version === '1.1.0', String(state.body?.version))
+  check('state version', state.body?.version === '1.2.0', String(state.body?.version))
   check('state capsule', typeof state.body?.capsule?.id === 'string' && state.body.capsule.id !== '', String(state.body?.capsule?.id))
   check('state session', typeof state.body?.session?.id === 'string' && state.body.session.id !== '', String(state.body?.session?.id))
 
@@ -103,7 +103,7 @@ try {
   check('diagnostics 8 checks', checks.length === EXPECTED_CHECKS.length, `${checks.length}`)
   check('diagnostics check ids', JSON.stringify(checks.map((item) => item.id)) === JSON.stringify(EXPECTED_CHECKS), checks.map((item) => item.id).join(','))
   check('diagnostics status', ['ok', 'warn', 'fail'].includes(diagnostics.body?.status), String(diagnostics.body?.status))
-  check('diagnostics report', String(diagnostics.body?.report).startsWith(`dsh-cockpit 1.1.0 诊断报告`))
+  check('diagnostics report', String(diagnostics.body?.report).startsWith(`dsh-cockpit 1.2.0 诊断报告`))
   check('diagnostics totals', diagnostics.body?.totals?.sessions === sessions.length, String(diagnostics.body?.totals?.sessions))
   check('diagnostics stream warn', checks.find((item) => item.id === 'stream')?.status === 'warn')
   check('diagnostics deck', diagnostics.body?.deck?.id === state.body?.session?.id, String(diagnostics.body?.deck?.id))

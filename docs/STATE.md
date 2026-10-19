@@ -1,8 +1,12 @@
-# Cockpit state contract (v1.1)
+# Cockpit state contract (v1.2)
 
 The plugin serves the whole app under `/cockpit`. The page is static; all live data
 comes from two endpoints. Everything below is JSON over HTTP — no build step, no
 framework.
+
+v1.2 adds no new fields: the settings hierarchy, the unified feedback tone, the
+folded activity stream and the capsule hover/pending styling are client- or
+overlay-only changes.
 
 Since v1.1 the plugin also exposes read-only helpers under the same `/cockpit/api`
 prefix (`diagnostics` is documented at the end of this file); they never mutate

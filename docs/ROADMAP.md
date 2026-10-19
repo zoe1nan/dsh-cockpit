@@ -1,8 +1,8 @@
 # Cockpit 路线图与优化清单
 
-> 当前版本：**v1.1.0**（本地提交 `5f82691`，2026-10-19）。
+> 当前版本：**v1.2.0**（本地提交，待发布；1.0.1 / 1.1.0 / 1.2.0 将一并推送）。
 > ⚠️ 发布状态：GitHub 网络受限（`git fetch`/`ls-remote` 均 Connection reset，`api.github.com` ENOTFOUND），
-> **1.0.1 与 1.1.0 都只在本地提交，线上仓库仍是 1.0.0**。
+> **线上仓库仍是 v1.0.0；1.0.1 / 1.1.0 / 1.2.0 待 token + 网络就绪后一次性推送并发 Release。**
 > 本版路线图：2026-10-19 重梳理（v1.1.0 落地后，基于代码/文档走查 + 联调 harness 结果）。
 > 更新规则：每完成一项，在 CHANGELOG 留一行并移入本文「已完成」；新想法先入 backlog，不直接插队。
 
@@ -29,7 +29,7 @@
 - `node:test` 18 例 + GitHub Actions CI（syntax / test / pack）
 - HUD 跟随修复（1.0.1 `f4c8c08`）随版本发布
 
-### v1.2.0 进行中（2026-10-19，本地提交，未发布）
+### v1.2.0 已完成（2026-10-19，本地提交，待发布）
 
 今日必做 7 项 + 1 项可选项已完成并单项提交：
 
@@ -44,7 +44,8 @@
 结论与调整：
 
 - B2「渲染签名补全」经代码核对**已无必要**：`stateSignature()` 本就覆盖除 `now` / `session.elapsedMs` 外的全部 payload（含 approvals/remote/capsule），未变化时 `applyState` 直接返回、不重绘。进一步优化需把「整树重建」改为局部 patch，属 v1.3 范围，已移出今日清单。
-- D6 启动回放、D7 实机验收 + 截图、D8 术语文案统一按计划留到下一工作日；C1 `scripts/release.mjs` + GitHub 上传等 token 到位后一起做。
+- 发布前已同步：`package.json` / `mock/state.json` / `README` 安装命令 / `CHANGELOG` 顶部 / `docs/STATE.md` 抬头全部升到 v1.2.0。
+- D6 启动回放、D8 术语文案统一留到发布后的下一个补丁；D7 实机验收改为发布后立刻做（重载插件 → 检查 8 项）。C1 `scripts/release.mjs` 在 token + 网络就绪后随发布一起做。
 
 ---
 
@@ -93,7 +94,7 @@
 | 编号 | 事项 | 做法 | 验收 | 量级 |
 | --- | --- | --- | --- | --- |
 | D1 | 文档校准 ✅ | 已完成（本版路线图提交）：CHANGELOG 16→18；STATE.md 契约头升 v1.1 并注明只读助手端点；发布状态写明「本地未推送」；ROADMAP 数量/状态同步 | `grep -rn "16 tests\|16 条"` 除 §1.1 历史说明外为空；三份文档版本/状态一致 | — |
-| D2 | preview 补齐 | `preview.mjs` 加 `/api/diagnostics` 假数据；`mock/state.json` 升 1.1.0 并补 `capsule` 字段；设置页「自检」在 preview 里可点 | `npm run preview` → 设置页自检卡显示「正常」，可展开报告 | 0.25 d |
+| D2 | preview 补齐 | `preview.mjs` 加 `/api/diagnostics` 假数据；`mock/state.json` 升 1.2.0 并补 `capsule` 字段；设置页「自检」在 preview 里可点 | `npm run preview` → 设置页自检卡显示「正常」，可展开报告 | 0.25 d |
 | D3 | CI 守卫 | 加 `ps1 BOM` 检查脚本、`pwsh -File` 解析 overlay.ps1、`app.css` 括号平衡检查、preview 冒烟（起 6077 抓 `/cockpit/` 200） | CI 全绿；故意去掉 BOM 时 CI 失败 | 0.5 d |
 | D4 | 失效 `?s=` 静默回落 | 区分「URL 带来的选择」与「用户手选」：来自 URL 的失效选择不弹 toast，直接换自动视图并清 URL | 旧链接打开无 toast；正常切换仍有提示 | 0.1 d |
 | D5 | `?focus=approvals` 健壮化 | 标记保留到「审批列表非空」或 10 s 超时再清；审批出现后仍自动展开+滚动 | 审批稍后才到时深链仍生效；无审批时 10 s 后不残留 | 0.1 d |

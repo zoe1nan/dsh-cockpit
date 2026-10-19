@@ -18,7 +18,7 @@ DeepSeek Harness 支持多个 agent 并行干活。但当一支编队跑起来�
 
 ---
 
-## 特性（v1.1）
+## 特性（v1.2）
 
 ### 看
 - **实时编队**：每个成员的模型、真实 token 数、当前动作、负责范围（自动从任务主题/改动文件归纳）；按运行中 / 空闲 / 异常分组，运行中永远在前
@@ -28,6 +28,9 @@ DeepSeek Harness 支持多个 agent 并行干活。但当一支编队跑起来�
 - **本轮数据**：进度、token、耗时、步骤、模型、状态，液面进度条随事件实时更新
 - **会话切换**：点左栏会话或顶部 pill 即切换，每个标签页记住自己的选择；顶栏「复制链接」给出可分享的视图链接，别人打开就落在同一个会话（v1.1）
 - **自检与诊断**：设置页一键自检（插件 / 状态数据 / 实时流 / 胶囊 / HUD 桥 / 远程 / 待审批 / 宿主接口），异常一眼可见，可复制完整报告发给维护者（v1.1）
+- **设置页重排**：连接/设备 → 胶囊 → 自检 → 通知 → 别名 → 关于，卡头与说明统一，窄屏同序（v1.2）
+- **反馈一致**：成功/提醒/失败用同一套语气与停留时长，失败文案直接给出下一步（v1.2）
+- **活动流降噪**：连续同类工具调用折叠为「×N」，空参数不再占一行（v1.2）
 
 ### 操作
 - **审批闸口**：审批请求直接出现在 deck 里，允许一次 / 拒绝；25 秒不处理自动交回原生弹窗
@@ -36,7 +39,7 @@ DeepSeek Harness 支持多个 agent 并行干活。但当一支编队跑起来�
 - **所有写操作**：同源校验、失败回滚、本地审计（`~/.dsh/cockpit/audit.jsonl`）
 
 ### 桌面胶囊（Windows）
-装一个插件就有桌面悬浮胶囊：液体进度条 + 步骤读数 + 「N 跑 · M 批」徽标；点击展开完整卡片，可一键打开指挥台。胶囊跟随**任意正在运行的对话**（1.0.1 起：谁在干活就显示谁，多个同时运行时跟随你最近输入的那个，空下来回到「待命」），不再只盯着指挥台会话。v1.1 起点击胶囊本体直接打开指挥台（有待审批时直接落在审批区），右上箭头才展开/收起卡片。胶囊进程由插件托管（自动启动/退出/崩溃重启），设置页可启停。
+装一个插件就有桌面悬浮胶囊：液体进度条 + 步骤读数 + 「N 跑 · M 批」徽标；点击展开完整卡片，可一键打开指挥台。胶囊跟随**任意正在运行的对话**（1.0.1 起：谁在干活就显示谁，多个同时运行时跟随你最近输入的那个，空下来回到「待命」），不再只盯着指挥台会话。v1.1 起点击胶囊本体直接打开指挥台（有待审批时直接落在审批区），右上箭头才展开/收起卡片；v1.2 起胶囊 hover 有描边高亮，待审批时描边转琥珀色。胶囊进程由插件托管（自动启动/退出/崩溃重启），设置页可启停。
 
 ![桌面胶囊设置](docs/capsule-settings.png)
 
@@ -70,7 +73,7 @@ DeepSeek Harness 支持多个 agent 并行干活。但当一支编队跑起来�
 2. 安装到你的 profile 并重启：
 
 ```bash
-dsh plugin --profile <profile> add /path/to/dsh-cockpit-1.1.0.tgz
+dsh plugin --profile <profile> add /path/to/dsh-cockpit-1.2.0.tgz
 ```
 
 3. 重启 DSH 后：侧栏出现「Cockpit 指挥台」，点开即用；桌面胶囊随宿主自动启动（Windows）。
@@ -165,12 +168,15 @@ docs/           契约与路线图
 - Approvals gate, queue / steer messages, interrupt a running turn — all click-driven, with a local audit log
 - Shareable view links: the header "copy link" button encodes the conversation on screen, so opening it lands on the same session (v1.1)
 - One-click self-check in settings (plugin, state, stream, capsule, HUD bridge, remote, approvals, host API) with a copyable report for bug reports (v1.1)
-- Built-in desktop capsule (Windows): liquid progress bar + badges; follows whichever conversation is working (v1.0.1 — most recently used conversation wins among several, returns to standby when idle); clicking the capsule opens the deck, the chevron toggles the card (v1.1), managed by the plugin, toggle in settings
+- Settings page reads top-down (connection/device, capsule, self-check, notifications, aliases, about) with one card chrome, same order on narrow screens (v1.2)
+- Unified feedback tone and dwell times (ok 2.4 s / warn 3.6 s / error 4.8 s), one inline alert style, failure copy names the next step (v1.2)
+- The activity stream folds back-to-back identical tool calls into a single "×N" row (v1.2)
+- Built-in desktop capsule (Windows): liquid progress bar + badges; follows whichever conversation is working (v1.0.1 — most recently used conversation wins among several, returns to standby when idle); clicking the capsule opens the deck, the chevron toggles the card (v1.1); hover adds a ring and pending approvals tint the border amber (v1.2), managed by the plugin, toggle in settings
 - Phone access: one-time pairing code, optional HTTPS tunnel wizard, Secure cookies, notifications, installable PWA
 - Extension cards: other plugins register read-only JSON cards with actions
 - Local-first: no telemetry; only the explicit actions you take write back to DSH
 
-Install: `dsh plugin --profile <profile> add /path/to/dsh-cockpit-1.1.0.tgz`, restart DSH, then open **Cockpit** in the sidebar.
+Install: `dsh plugin --profile <profile> add /path/to/dsh-cockpit-1.2.0.tgz`, restart DSH, then open **Cockpit** in the sidebar.
 
 Windows capsule requires Windows 10 2004+. PWA install and notifications need a secure context (HTTPS or localhost). Backend Web Push is not implemented yet.
 

@@ -3,6 +3,59 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 1.2.0 — Day-to-day polish
+
+The "less friction" release: the settings page reads top-down, feedback looks
+the same wherever it happens, the desktop capsule answers the pointer, and the
+activity stream stops repeating itself. No new surfaces — the existing ones got
+quieter and easier to trust.
+
+### Added
+
+- Settings → 自检与诊断 now works in `npm run preview`: the preview server
+  serves a diagnostics mock (8 checks + report), so UI work can be checked in a
+  browser without restarting DSH (D2)
+- `scripts/preview-smoke.mjs`: a 26-check smoke test that boots the preview
+  server and exercises the page, state, capsule, bridge, diagnostics and stream
+  endpoints (D3)
+- Capsule hover feedback (Windows): the collapsed capsule fades in a thin ring
+  and lifts slightly on hover; while approvals wait the resting border turns
+  amber and the hover ring brightens. 140 ms in / 180 ms out; click, drag and
+  the chevron zone are unchanged (A4)
+- The activity stream folds back-to-back identical tool calls into one row with
+  a `×N` badge (the tooltip keeps the folded commands) and drops empty detail
+  segments (B1)
+
+### Changed
+
+- Settings page hierarchy (A1): connection/device cards first, then capsule,
+  self-check, notifications, aliases and about; every card shares the same
+  header chrome, and narrow screens keep the same order
+- Feedback tone and timing unified (A2): `toast` knows ok/warn/error with
+  2.4 s / 3.6 s / 4.8 s dwell, every inline failure uses the same alert block,
+  and failure copy names the next step
+- A stale `?s=` share link returns to the automatic view silently; only a
+  session the user picked by hand gets the explanation (D4)
+- `?focus=approvals` deep links wait up to 3 frames / 5 s for the approval gate,
+  then drop the intent silently instead of leaving a pending focus (D5)
+
+### Fixed
+
+- `?focus=approvals` could be consumed by the first frame before the approval
+  arrived, leaving the deck without a focus target (D5)
+- The preview server lacked `/api/diagnostics`, so the settings self-check was
+  always red in `npm run preview` (D2)
+
+### Tests
+
+- `npm test`: 18 cases (frame-signature helpers, capsule focus, diagnostics helpers)
+- `npm run smoke`: 26 preview checks; `npm run check`: 9 asset guards
+  (ps1 BOM / encoding / line endings, css braces, version consistency)
+- CI also runs the asset guards, the preview smoke and a Windows PowerShell
+  parse job
+- Headless Edge acceptance: 53 checks covering D4/D5, A1 order at three widths,
+  A2 failure tones and B1 folding
+
 ## 1.1.0 — Self-check, shareable views, one-tap capsule
 
 The "less guessing" release: the settings page can tell you what is wrong and
