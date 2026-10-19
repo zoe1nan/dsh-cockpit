@@ -56,6 +56,7 @@
   "scripts": {
     "preview": "node scripts/preview.mjs",
     "smoke": "node scripts/preview-smoke.mjs",
+    "check": "node scripts/check-assets.mjs",
     "test": "node --test"
   }
 }
