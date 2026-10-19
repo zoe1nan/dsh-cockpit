@@ -100,6 +100,10 @@
   var HUD_BRIDGE_URL = './api/hud-bridge';
   var DIAG_URL = './api/diagnostics';
   var CAPSULE_HEARTBEAT_MS = 15000;
+  /* v1.2: how long a one-shot ?focus=approvals deep link may wait for the
+   * approval to show up — the first frame often arrives before the gate does. */
+  var FOCUS_RETRY_FRAMES = 3;
+  var FOCUS_TIMEOUT_MS = 5000;
 
   var EMBED = /(?:[?&])embed=1(?:&|$)/.test(window.location.search);
   /* Column widths are user-draggable and remembered per browser. */
@@ -158,6 +162,10 @@
     /* v0.5: per-connection session selection (?s=), render buffering while an
      * inline rename is open, and the persisted teammate order. */
     selectedSession: null,
+    /* v1.2: true only when the user picked the session by hand. A stale ?s=
+     * bookmark returns to the automatic view silently; a hand-picked session
+     * that vanished still deserves the toast. */
+    selectedManual: false,
     stateSeq: 0,
     pendingState: null,
     order: [],
@@ -236,6 +244,8 @@
     /* v1.1: one-shot deep-link intent from the capsule (?focus=approvals) and
      * the settings self-check card state (loaded lazily, never polled). */
     focusRequest: '',
+    focusUntil: 0,
+    focusFrames: 0,
     scrollApprovals: false,
     diag: {
       seq: 0,
@@ -4343,6 +4353,7 @@
       .catch(function () {
         if (seq !== app.stateSeq) return;
         app.selectedSession = null;
+        app.selectedManual = false;
         reconnectStream();
         scheduleRender();
         toast('切换会话失败，已回到自动视图');
@@ -4356,6 +4367,7 @@
     if (app.editing) cancelEdit();
     if (app.ir.key) cancelInterrupt();
     app.selectedSession = id;
+    app.selectedManual = true;
     syncSessionURL(id);
     scheduleRender();   /* optimistic: the clicked row / pill lights up now */
     reconnectStream();  /* independent per-connection selection (?s=) */
@@ -4397,10 +4409,15 @@
     if (app.selectedSession) {
       var gotSession = payload.session && payload.session.id ? String(payload.session.id) : '';
       if (gotSession !== app.selectedSession) {
+        var wasManual = app.selectedManual;
         app.selectedSession = null;
+        app.selectedManual = false;
         syncSessionURL('');
         reconnectStream();
-        toast('该会话已结束，已回到自动视图');
+        /* v1.2: a stale ?s= bookmark (shared link, reload, bookmark) returns to
+         * the automatic view silently; only a session the user picked by hand
+         * earns an explanation. */
+        if (wasManual) toast('该会话已结束，已回到自动视图');
       }
     }
     /* v0.5: an open inline rename owns the rail. Buffer frames instead of
@@ -4430,16 +4447,24 @@
     app.aliases = mergeAliases(payload.aliases);
     /* v1.1: the capsule deep-links "打开指挥台" with ?focus=approvals when a
      * decision is waiting; reveal the gate once, then drop the intent so a
-     * later refresh does not re-focus. */
+     * later refresh does not re-focus. v1.2: wait up to FOCUS_RETRY_FRAMES
+     * frames / FOCUS_TIMEOUT_MS because the first frame can arrive before the
+     * approval does; if nothing shows up the intent is dropped silently. */
     if (app.focusRequest === 'approvals') {
-      app.focusRequest = '';
-      syncFocusURL();
-      var pending = arr(payload.approvals);
-      if (pending.length) {
+      var waitingApprovals = arr(payload.approvals);
+      if (waitingApprovals.length) {
+        app.focusRequest = '';
+        syncFocusURL();
         app.ap.expanded = true;
         app.scrollApprovals = true;
-        var firstId = approvalId(pending[0]);
-        if (firstId) app.ap.focus = firstId;
+        var firstApprovalId = approvalId(waitingApprovals[0]);
+        if (firstApprovalId) app.ap.focus = firstApprovalId;
+      } else {
+        app.focusFrames = Math.max(0, app.focusFrames - 1);
+        if (app.focusFrames === 0 || Date.now() > app.focusUntil) {
+          app.focusRequest = '';
+          syncFocusURL();
+        }
       }
     }
     if (unchanged) return;
@@ -5133,8 +5158,15 @@
     /* v1.1: shareable view links and the capsule's ?focus= deep link are read
      * before the first frame so the very first stream handshake carries ?s=. */
     var linkedSession = sessionFromURL();
-    if (linkedSession) app.selectedSession = linkedSession;
+    if (linkedSession) {
+      app.selectedSession = linkedSession;
+      app.selectedManual = false;
+    }
     app.focusRequest = focusFromURL();
+    if (app.focusRequest) {
+      app.focusFrames = FOCUS_RETRY_FRAMES;
+      app.focusUntil = Date.now() + FOCUS_TIMEOUT_MS;
+    }
     /* v0.6: manifest shortcuts deep-link ?tab= on the mobile tab bar. */
     var linkedTab = tabFromURL();
     if (linkedTab) app.tab = linkedTab;

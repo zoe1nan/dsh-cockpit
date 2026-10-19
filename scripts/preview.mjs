@@ -171,8 +171,12 @@ let hudBridge = {
     round: { title: '认证模块重构', percent: 60, done: 3, total: 5, running: true },
   },
 }
-/** Pending approvals; the demo seeds one so answer flows can be exercised. */
-let approvals = (mock.approvals ?? []).map((entry) => ({ ...entry }))
+/** Pending approvals; the demo seeds one so answer flows can be exercised.
+ * Set PREVIEW_APPROVALS=0 to boot without any, which lets the browser tests
+ * exercise the ?focus=approvals timeout path (no gate shows up). */
+let approvals = process.env.PREVIEW_APPROVALS === '0'
+  ? []
+  : (mock.approvals ?? []).map((entry) => ({ ...entry }))
 /** When the preview first saw each ask; the demo countdown is anchored to it. */
 const approvalAnchors = new Map()
 const bootAt = Date.now()
