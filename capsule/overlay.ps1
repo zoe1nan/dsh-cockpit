@@ -97,6 +97,10 @@ $script:appVisible = $false
 $script:percentValue = $null
 $script:stepsSignature = ''
 $script:drag = $null
+# v1.1: last bridge snapshot kept for capsule click-through (open cockpit).
+$script:cockpitUrl = ''
+$script:bridgeRunning = 0
+$script:bridgeApprovals = 0
 $script:hoverTimer = $null
 $script:whaleBitmap = New-Object System.Windows.Media.Imaging.BitmapImage
 $script:whaleBitmap.BeginInit()
@@ -935,6 +939,32 @@ function Apply-State($state) {
 }
 
 # ------------------------------------------------------------------ events
+# v1.1: click-through. A plain click on the capsule opens the cockpit (the HUD
+# stays read-only; approvals are decided there, never here). When an approval is
+# pending, the link deep-links straight to the approval gate (?focus=approvals).
+function Get-CockpitTarget {
+  $url = [string]$script:cockpitUrl
+  if ($url -eq '') { return '' }
+  if ($script:bridgeApprovals -gt 0) {
+    if ($url.Contains('?')) { return ($url + '&focus=approvals') }
+    return ($url + '?focus=approvals')
+  }
+  return $url
+}
+
+function Open-Cockpit {
+  $target = Get-CockpitTarget
+  if ($target -eq '') { return $false }
+  try {
+    Start-Process $target
+    Write-Log ('open cockpit: ' + $target)
+    return $true
+  } catch {
+    Write-Log ('open cockpit failed: ' + $_)
+    return $false
+  }
+}
+
 $capsule.Add_MouseEnter({
   if ($script:expanded) { return }
   if ($script:hoverTimer) { $script:hoverTimer.Stop() }
@@ -1011,7 +1041,19 @@ $capsule.Add_MouseLeftButtonUp({
       Set-Content -Path $posFile -Value $pos -Encoding utf8
     } catch { }
   } else {
-    Toggle-Expanded (-not $script:expanded)
+    # v1.1: the chevron keeps toggling the card; the rest of the capsule opens
+    # the cockpit. Expanded card background collapses again (buttons handle
+    # their own clicks before this handler runs).
+    $overChevron = $false
+    try { $overChevron = ($event.GetPosition($capsule).X -ge ($capsule.ActualWidth - 34)) } catch { }
+    if ($overChevron) {
+      Toggle-Expanded (-not $script:expanded)
+    } elseif ($script:expanded) {
+      Toggle-Expanded $false
+    } elseif (-not (Open-Cockpit)) {
+      # No cockpit URL yet (bridge missing/stale): keep the old behavior.
+      Toggle-Expanded $true
+    }
   }
 })
 
@@ -1228,6 +1270,14 @@ function Update-BridgeUi {
     } catch { $fresh = $false }
   }
   $script:bridgeFresh = $fresh
+  $script:cockpitUrl = $url
+  $script:bridgeRunning = $running
+  $script:bridgeApprovals = $pending
+  if ($fresh) {
+    $capsule.ToolTip = if ($pending -gt 0) { '有待审批 · 点击打开指挥台' } else { '点击打开指挥台' }
+  } else {
+    $capsule.ToolTip = '点击展开任务胶囊'
+  }
   if ($fresh -and ($running -gt 0 -or $pending -gt 0)) {
     $parts = @()
     if ($running -gt 0) { $parts += ('{0} 跑' -f $running) }
@@ -1250,7 +1300,7 @@ function Update-BridgeUi {
       $deckRound.Text = '编队、任务板与审批都在指挥台里'
     }
     if ($url -ne '') {
-      $deckButton.Tag = $url
+      $deckButton.Tag = Get-CockpitTarget
       $deckButton.Visibility = 'Visible'
     } else {
       $deckButton.Visibility = 'Collapsed'

@@ -60,6 +60,8 @@ const HUD_FILE = join(COCKPIT_DIR, 'hud.json')
 const SETTINGS_FILE = join(COCKPIT_DIR, 'settings.json')
 const BRIDGE_MIN_MS = 2000
 const BRIDGE_STALE_MS = 120000
+/** v1.1: rewrite the bridge at least this often even when its content is unchanged. */
+const BRIDGE_REFRESH_MS = 60_000
 /** Built-in desktop capsule (v0.8): the WPF overlay now ships inside this plugin. */
 const CAPSULE_DIR = join(COCKPIT_DIR, 'capsule')
 const CAPSULE_STATE_FILE = join(CAPSULE_DIR, 'state.json')
@@ -67,6 +69,9 @@ const CAPSULE_HEARTBEAT_FILE = join(CAPSULE_DIR, 'overlay.heartbeat')
 const CAPSULE_SCRIPT = join(import.meta.dirname, 'capsule', 'overlay.ps1')
 const LEGACY_HUD_HEARTBEAT = join(homedir(), '.dsh', 'dsh-hud', 'overlay.heartbeat')
 const CAPSULE_MIN_MS = 150
+/** v1.1: idle keepalive for the two files the capsule polls. Their visible
+ * content is compared first, so a quiet HUD stops rewriting them every tick. */
+const CAPSULE_REFRESH_MS = 30_000
 const CAPSULE_TICK_MS = 1000
 const CAPSULE_RESTART_MS = 5000
 const CAPSULE_ENABLED_DEFAULT = process.platform === 'win32'
@@ -190,6 +195,59 @@ function sameSecret(a, b) {
   const left = Buffer.from(sha256(a), 'hex')
   const right = Buffer.from(sha256(b), 'hex')
   return timingSafeEqual(left, right)
+}
+
+/**
+ * JSON signature of a payload ignoring the listed volatile fields. Keys may
+ * use one level of dotted path for nested fields ("active.lastAt"): the
+ * capsule frame nests its build clock inside "active", the HUD bridge keeps
+ * "at" at the top level. Comparing signatures tells "same visible content"
+ * apart from "new clock value" so a writer can skip unchanged files (v1.1).
+ */
+function signatureWithout(value, keys) {
+  const copy = {}
+  const nested = []
+  for (const [key, field] of Object.entries(value ?? {})) {
+    if (!keys.includes(key)) copy[key] = field
+  }
+  for (const key of keys) {
+    const dot = key.indexOf('.')
+    if (dot <= 0) continue
+    nested.push([key.slice(0, dot), key.slice(dot + 1)])
+  }
+  for (const [parent, child] of nested) {
+    const target = copy[parent]
+    if (target === null || typeof target !== 'object' || Array.isArray(target)) continue
+    copy[parent] = { ...target }
+    delete copy[parent][child]
+  }
+  return JSON.stringify(copy)
+}
+
+/** Short human age for diagnostics ("3s 前" / "2 分钟前"). */
+function formatAge(ms) {
+  const value = Number(ms)
+  if (!Number.isFinite(value) || value < 0) return '—'
+  if (value < 1000) return '刚刚'
+  const seconds = Math.round(value / 1000)
+  if (seconds < 60) return `${seconds}s 前`
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes} 分钟前`
+  const hours = Math.round(minutes / 60)
+  if (hours < 48) return `${hours} 小时前`
+  return `${Math.round(hours / 24)} 天前`
+}
+
+/** Short human duration for diagnostics ("3m 12s"). */
+function formatSpan(ms) {
+  const value = Number(ms)
+  if (!Number.isFinite(value) || value <= 0) return '—'
+  const seconds = Math.round(value / 1000)
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ${seconds % 60}s`
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ${minutes % 60}m`
 }
 
 function deviceLabel(req) {
@@ -1765,6 +1823,7 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
   // the deck URL live here - no titles of files, no message text, no tokens.
   let bridgeAt = 0
   let bridgeLast = ''
+  let bridgeWrittenAt = 0
 
   function bridgeOrigin() {
     const origin = safe(() => text(ctx.webServer.getOrigin()), '')
@@ -1810,9 +1869,14 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
     bridgeAt = now
     try {
       const payload = await buildBridgePayload()
+      // v1.1: `at` changes on every build, so compare what the overlay can
+      // actually show; an idle bridge stops rewriting the file on every tick
+      // and only refreshes it once per keepalive window.
+      const signature = signatureWithout(payload, ['at'])
+      if (!force && signature === bridgeLast && now - bridgeWrittenAt < BRIDGE_REFRESH_MS) return
       const encoded = JSON.stringify(payload)
-      if (encoded === bridgeLast) return
-      bridgeLast = encoded
+      bridgeLast = signature
+      bridgeWrittenAt = now
       ensureDir()
       const tmp = `${HUD_FILE}.tmp`
       writeFileSync(tmp, encoded, 'utf8')
@@ -1838,7 +1902,7 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
   let capsuleWrittenAt = 0
   let capsuleWrites = 0
   let capsuleLastError = ''
-  let capsuleLastFrame = ''
+  let capsuleLastSignature = ''
   let capsulePushedAt = 0
 
   const capsuleSupported = process.platform === 'win32' && existsSync(CAPSULE_SCRIPT)
@@ -1852,9 +1916,14 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
     if (!capsuleSupported || !capsuleEnabled()) return
     try {
       mkdirSync(CAPSULE_DIR, { recursive: true })
-      const encoded = JSON.stringify({ v: 1, at: state.now, ...capsuleView(state) })
-      if (encoded === capsuleLastFrame) return
-      capsuleLastFrame = encoded
+      const frame = capsuleView(state)
+      // v1.1: `lastAt` is the build clock, so compare the rest of the frame and
+      // stop rewriting an idle capsule every second (keepalive below keeps it
+      // warm and lets the overlay's own staleness checks work).
+      const signature = signatureWithout(frame, ['active.lastAt'])
+      if (signature === capsuleLastSignature && Date.now() - capsuleWrittenAt < CAPSULE_REFRESH_MS) return
+      const encoded = JSON.stringify({ v: 1, at: state.now, ...frame })
+      capsuleLastSignature = signature
       const tmp = `${CAPSULE_STATE_FILE}.tmp`
       writeFileSync(tmp, encoded, 'utf8')
       renameSync(tmp, CAPSULE_STATE_FILE)
@@ -1878,6 +1947,126 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
   }
 
   const scheduleCapsule = debounce(() => { void pushCapsule(true) }, CAPSULE_MIN_MS)
+
+  // -- diagnostics (v1.1) --------------------------------------------------
+  //
+  // One local self-check the settings page shows and can copy into a bug
+  // report. Every probe below is already known to this process (SSE clients,
+  // capsule child, remote listener, tracker), so no extra round trip is
+  // needed: the host's own /api/* is meant to be called by an authenticated
+  // browser session and answers 401 without one.
+  async function buildDiagnostics() {
+    const now = Date.now()
+    const state = await buildState(null)
+    const sessions = safe(() => ctx.sessions.list(), [])
+    const capsules = capsuleStatus()
+    const remoteStatus = safe(() => remote.status(), null) ?? { ok: false, enabled: false, running: false }
+    const bridgePayload = safe(() => JSON.parse(readFileSync(HUD_FILE, 'utf8')), null)
+    const bridgeAt = bridgePayload !== null && typeof bridgePayload.at === 'number' ? Number(bridgePayload.at) : null
+    const bridgeAge = bridgeAt === null ? null : Math.max(0, now - bridgeAt)
+    const heartbeatAge = capsules.heartbeatAt > 0 ? Math.max(0, now - capsules.heartbeatAt) : null
+    const pending = approvals.size
+    const running = Array.isArray(state.sessions) ? state.sessions.filter((item) => item.running === true).length : 0
+    const describe = (view) => view === null || view === undefined
+      ? '无'
+      : `${text(view.title) || '未命名'}${view.running === true ? '（运行中）' : ''}`
+    const deckSession = describe(state.session)
+    const capsuleSession = describe(state.capsule)
+    const checks = []
+    const check = (id, label, status, detail) => {
+      const item = { id, label, status, detail: text(detail) }
+      checks.push(item)
+      return item
+    }
+    check('plugin', '插件进程', 'ok', `${PLUGIN_VERSION} · ${process.platform} ${process.arch} · Node ${process.versions.node} · 已运行 ${formatSpan(process.uptime() * 1000)}`)
+    check('state', '状态数据', 'ok', `会话 ${sessions.length} 个（运行中 ${running}）· 指挥台「${deckSession}」· 胶囊跟随「${capsuleSession}」`)
+    check('stream', '实时流', sseClients.size > 0 ? 'ok' : 'warn', sseClients.size > 0 ? `${sseClients.size} 个客户端已连接` : '当前没有连接的客户端（打开指挥台页面即可恢复）')
+    if (!capsules.supported) {
+      check('capsule', '桌面胶囊', 'warn', '当前系统不支持（仅 Windows）')
+    } else if (!capsules.enabled) {
+      check('capsule', '桌面胶囊', 'warn', '已在设置里关闭')
+    } else if (capsules.running) {
+      check('capsule', '桌面胶囊', 'ok', `进程运行中（pid ${capsules.pid}）· 心跳 ${heartbeatAge === null ? '未知' : formatAge(heartbeatAge)} · 已写入 ${capsules.writes} 帧`)
+    } else {
+      check('capsule', '桌面胶囊', 'fail', capsules.lastError === '' ? '胶囊进程未运行' : `胶囊进程未运行：${capsules.lastError}`)
+    }
+    if (settings.hudBridge === false) {
+      check('bridge', 'HUD 数据桥', 'warn', '已在设置里关闭')
+    } else if (bridgePayload === null) {
+      check('bridge', 'HUD 数据桥', 'warn', '还没有生成 hud.json（插件刚启动或桥接被关闭）')
+    } else if (bridgeAge === null || bridgeAge >= BRIDGE_STALE_MS) {
+      check('bridge', 'HUD 数据桥', 'fail', `hud.json 超过 ${formatSpan(BRIDGE_STALE_MS)} 未更新（${bridgeAge === null ? '时间戳缺失' : formatAge(bridgeAge)}）`)
+    } else {
+      check('bridge', 'HUD 数据桥', 'ok', `已启用 · ${formatAge(bridgeAge)}更新`)
+    }
+    if (remoteStatus.enabled === false) {
+      check('remote', '远程接管', 'warn', '当前不可用')
+    } else if (remoteStatus.running === true) {
+      check('remote', '远程接管', 'ok', `${remoteStatus.secure === true ? 'HTTPS' : 'HTTP'} · ${text(remoteStatus.urlForPhone || remoteStatus.url) || '地址未知'} · ${Array.isArray(remoteStatus.sessions) ? remoteStatus.sessions.length : 0} 台设备`)
+    } else {
+      check('remote', '远程接管', 'warn', '未启动（只在手机上用时才需要）')
+    }
+    check('approvals', '待审批', pending === 0 ? 'ok' : 'warn', pending === 0 ? '没有待审批请求' : `${pending} 个待审批请求（在指挥台里处理）`)
+    check('host-api', 'DSH 宿主接口', 'ok', '指挥台的 /cockpit/* 不经过宿主鉴权；宿主 /api/* 需要登录会话，未登录时返回 401 属正常')
+    const status = checks.some((item) => item.status === 'fail') ? 'fail' : checks.some((item) => item.status === 'warn') ? 'warn' : 'ok'
+    const report = [
+      `dsh-cockpit ${PLUGIN_VERSION} 诊断报告`,
+      `生成时间：${new Date(now).toLocaleString('zh-CN', { hour12: false })}`,
+      `插件路径：${import.meta.dirname}`,
+      `主机：${process.platform} ${process.arch} · Node ${process.versions.node} · 进程 ${process.pid} · 已运行 ${formatSpan(process.uptime() * 1000)}`,
+      `会话：${sessions.length} 个（运行中 ${running}）· 指挥台「${deckSession}」· 胶囊跟随「${capsuleSession}」`,
+      `实时流：${sseClients.size} 个客户端 · 待审批：${pending}`,
+      `胶囊：${!capsules.supported ? '不支持' : capsules.running ? `运行中（pid ${capsules.pid}，心跳 ${heartbeatAge === null ? '未知' : formatAge(heartbeatAge)}）` : '未运行'} · 帧 ${capsules.writes} · 最近写入 ${capsules.writtenAt > 0 ? formatAge(now - capsules.writtenAt) : '—'}`,
+      `HUD 桥：${settings.hudBridge === false ? '已关闭' : bridgeAge === null ? '尚未生成' : `已启用（${formatAge(bridgeAge)}更新）`}`,
+      `远程接管：${remoteStatus.running === true ? text(remoteStatus.urlForPhone || remoteStatus.url) || '已启动' : '未启动'}`,
+      '---',
+      ...checks.map((item) => `[${item.status}] ${item.label}：${item.detail}`),
+    ]
+    return {
+      ok: true,
+      plugin: 'dsh-cockpit',
+      version: PLUGIN_VERSION,
+      generatedAt: now,
+      status,
+      host: {
+        pid: process.pid,
+        platform: process.platform,
+        arch: process.arch,
+        node: process.versions.node,
+        uptimeMs: Math.round(process.uptime() * 1000),
+      },
+      totals: {
+        sessions: sessions.length,
+        running,
+        streamClients: sseClients.size,
+        approvals: pending,
+        capsule: capsules.running,
+        bridge: bridgeAge !== null && bridgeAge < BRIDGE_STALE_MS,
+        remote: remoteStatus.running === true,
+      },
+      deck: state.session === null ? null : { id: text(state.session.id), title: text(state.session.title), running: state.session.running === true },
+      capsuleFocus: state.capsule === null ? null : { id: text(state.capsule.id), title: text(state.capsule.title), running: state.capsule.running === true },
+      capsule: {
+        supported: capsules.supported,
+        enabled: capsules.enabled,
+        running: capsules.running,
+        pid: capsules.pid,
+        heartbeatAgeMs: heartbeatAge,
+        lastError: capsules.lastError,
+        legacyDetected: capsules.legacyDetected,
+      },
+      bridge: { enabled: settings.hudBridge !== false, path: HUD_FILE, ageMs: bridgeAge, staleMs: BRIDGE_STALE_MS },
+      remote: {
+        enabled: remoteStatus.enabled !== false,
+        running: remoteStatus.running === true,
+        secure: remoteStatus.secure === true,
+        port: remoteStatus.port ?? null,
+        url: text(remoteStatus.urlForPhone || remoteStatus.url),
+      },
+      checks,
+      report: report.join('\n'),
+    }
+  }
 
   function capsuleStatus() {
     const heartbeat = safe(() => statSync(CAPSULE_HEARTBEAT_FILE).mtimeMs, 0)
@@ -1976,7 +2165,8 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
     settings.capsule = value
     saveSettings(settings)
     bridgeLast = ''
-    capsuleLastFrame = ''
+    bridgeWrittenAt = 0
+    capsuleLastSignature = ''
     capsuleWrittenAt = 0
     if (value) {
       void pushBridge(true)
@@ -2130,6 +2320,11 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
     try {
       if (path === '/cockpit/api/state' && req.method === 'GET') {
         return sendJson(res, 200, await buildState(url.searchParams.get('s')))
+      }
+      if (path === '/cockpit/api/diagnostics' && req.method === 'GET') {
+        // Local self-check for the settings page (v1.1). Read-only; the
+        // report is meant to be pasted into a bug report.
+        return sendJson(res, 200, await buildDiagnostics())
       }
       if (path === '/cockpit/api/stream' && req.method === 'GET') {
         res.writeHead(200, {
@@ -2470,4 +2665,4 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
 }
 
 /** Test seam; not part of the plugin surface. */
-export const __internals = { Tracker, pickCapsuleSession, capsuleView, prettifyModel, toolLabel, toolDetail, isPrivateIp, detectLanIp, sameSecret }
+export const __internals = { Tracker, pickCapsuleSession, capsuleView, signatureWithout, formatAge, formatSpan, prettifyModel, toolLabel, toolDetail, isPrivateIp, detectLanIp, sameSecret }

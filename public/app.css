@@ -2787,6 +2787,64 @@ body.is-reordering * { user-select: none !important; }
 }
 .d-settings .alias-reset:hover { color: var(--brand); border-color: rgba(77, 107, 254, .3); }
 .d-settings .alias-default { font-size: 9.5px; color: var(--faint); }
+/* ---------- v1.1: settings diagnostics card ---------- */
+.d-settings .diag-card { min-width: 0; }
+.diag-status {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: .3px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+}
+.diag-status.warn { color: var(--amber); background: rgba(245, 158, 11, .1); border-color: rgba(245, 158, 11, .28); }
+.diag-status.fail { color: var(--red); background: rgba(220, 38, 38, .08); border-color: rgba(220, 38, 38, .26); }
+.diag-rows { display: grid; gap: 1px; margin-top: 10px; }
+.diag-row {
+  display: grid;
+  grid-template-columns: 8px auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 11px;
+}
+.diag-row:last-child { border-bottom: 0; }
+.diag-dot { width: 7px; height: 7px; border-radius: 99px; background: var(--faint); align-self: center; }
+.diag-dot.ok { background: var(--green); }
+.diag-dot.warn { background: var(--amber); }
+.diag-dot.fail { background: var(--red); }
+.diag-label { color: var(--soft); font-weight: 600; white-space: nowrap; }
+.diag-detail {
+  color: var(--faint);
+  font-size: 10px;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.diag-meta { margin-top: 8px; }
+.diag-report { margin-top: 6px; }
+.diag-report summary { cursor: pointer; font-size: 10px; color: var(--muted); }
+.diag-report summary:hover { color: var(--ink); }
+.diag-report pre {
+  margin: 8px 0 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(22, 32, 64, .045);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--soft);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.set-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+[data-theme="dark"] .diag-report pre { background: rgba(255, 255, 255, .06); }
+[data-theme="dark"] .diag-status.warn { background: rgba(245, 158, 11, .14); }
+[data-theme="dark"] .diag-status.fail { background: rgba(248, 113, 113, .12); }
 [data-theme="dark"] .d-settings .kv code { background: rgba(255, 255, 255, .07); }
 [data-theme="dark"] .d-settings .alias-reset { background: rgba(255, 255, 255, .05); }
 [data-theme="dark"] .d-settings .alias-reset:hover { color: var(--brand-2); }

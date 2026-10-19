@@ -98,6 +98,7 @@
    * ./api/hud-bridge is still read for the small team/approval summary. */
   var CAPSULE_URL = './api/capsule';
   var HUD_BRIDGE_URL = './api/hud-bridge';
+  var DIAG_URL = './api/diagnostics';
   var CAPSULE_HEARTBEAT_MS = 15000;
 
   var EMBED = /(?:[?&])embed=1(?:&|$)/.test(window.location.search);
@@ -230,6 +231,22 @@
     notify: {
       busy: false,
       error: '',
+      focus: ''
+    },
+    /* v1.1: one-shot deep-link intent from the capsule (?focus=approvals) and
+     * the settings self-check card state (loaded lazily, never polled). */
+    focusRequest: '',
+    scrollApprovals: false,
+    diag: {
+      seq: 0,
+      loaded: false,
+      busy: false,
+      error: '',
+      status: '',
+      version: '',
+      generatedAt: 0,
+      checks: [],
+      report: '',
       focus: ''
     },
     /* v0.8: built-in desktop capsule card (desktop settings). `running` comes
@@ -948,6 +965,22 @@
       var nEl = root.querySelector('[data-fk="' + String(nKey).replace(/["\\]/g, '\\$&') + '"]');
       if (nEl && nEl.offsetParent !== null) nEl.focus({ preventScroll: true });
     }
+    /* v1.1: the diagnostics card keeps focus on the button that changed. */
+    if (app.diag.focus) {
+      var dKey = app.diag.focus;
+      app.diag.focus = '';
+      var dEl = root.querySelector('[data-fk="' + String(dKey).replace(/["\\]/g, '\\$&') + '"]');
+      if (dEl && dEl.offsetParent !== null) dEl.focus({ preventScroll: true });
+    }
+    /* v1.1: ?focus=approvals deep link from the capsule - bring the gate into
+     * view (the approval itself still has to be decided here, never in the HUD). */
+    if (app.scrollApprovals) {
+      app.scrollApprovals = false;
+      var gate = root.querySelector('.approvals');
+      if (gate) {
+        try { gate.scrollIntoView({ block: 'center' }); } catch (err) { /* ignore */ }
+      }
+    }
     /* v0.4: the composer lives outside #app (so frames never eat typed text);
      * keep it glued to its trigger and close it if that trigger went away. */
     syncComposerAnchor();
@@ -990,6 +1023,9 @@
         (list.length ? list.map(sessionPillHTML).join('') : '<span class="pills-empty">暂无会话</span>') +
       '</nav>' +
       '<div class="topright">' +
+        '<button class="set-gear copy-link" type="button" data-action="copy-view-link" title="复制当前视图链接" aria-label="复制当前视图链接">' +
+          ICON_LINK + '<span class="set-gear-t">复制链接</span>' +
+        '</button>' +
         '<button class="set-gear' + (app.tab === 'settings' ? ' is-on' : '') + '" type="button" data-action="settings-toggle"' +
           ' aria-pressed="' + (app.tab === 'settings' ? 'true' : 'false') + '" title="设置" aria-label="设置">' +
           ICON_GEAR + '<span class="set-gear-t">设置</span>' +
@@ -3239,6 +3275,105 @@
     '</div>';
   }
 
+  /* ---------- v1.1: settings diagnostics ---------------------------------- */
+  function diagBadgeHTML() {
+    var d = app.diag;
+    if (d.busy) return '<span class="remote-status off"><i aria-hidden="true"></i>检查中</span>';
+    if (!d.loaded) return '<span class="remote-status off">未自检</span>';
+    if (d.status === 'ok') return '<span class="remote-status on"><i aria-hidden="true"></i>正常</span>';
+    if (d.status === 'warn') return '<span class="diag-status warn">有提醒</span>';
+    return '<span class="diag-status fail">有异常</span>';
+  }
+
+  /** Desktop settings card: "自检与诊断" - a one-click local self-check whose
+   * report can be pasted into a bug report (read-only; never changes state). */
+  function diagnosticsCardHTML() {
+    if (REMOTE_MODE) return '';
+    var d = app.diag;
+    var head = '<div class="remote-head diag-head"><h3>自检与诊断</h3>' + diagBadgeHTML() + '</div>';
+    var note = '<p class="set-note diag-note">出问题时先跑一次自检，把报告贴给维护者。</p>';
+    var actions = '<div class="set-actions diag-actions">' +
+      '<button class="remote-btn" type="button" data-action="diag-run" data-fk="diag-run"' + (d.busy ? ' disabled' : '') + '>' +
+        (d.busy ? '<span class="spin" aria-hidden="true"></span>检查中…' : (d.loaded ? '重新自检' : '运行自检')) +
+      '</button>' +
+      (d.report
+        ? '<button class="remote-btn primary" type="button" data-action="diag-copy" data-fk="diag-copy">复制报告</button>'
+        : '') +
+    '</div>';
+    var body;
+    if (d.error) {
+      body = '<p class="hud-fail" role="alert">' + esc(d.error) + '</p>';
+    } else if (!d.loaded) {
+      body = '<p class="set-note diag-loading">检查插件接口、桌面胶囊、HUD 数据桥与远程接管是否正常。</p>';
+    } else {
+      body = '<div class="diag-rows">' + d.checks.map(function (c) {
+        return '<div class="diag-row" data-status="' + esc(c.status) + '">' +
+          '<b class="diag-dot ' + esc(c.status) + '" aria-hidden="true"></b>' +
+          '<span class="diag-label">' + esc(c.label) + '</span>' +
+          '<span class="diag-detail">' + esc(c.detail) + '</span>' +
+        '</div>';
+      }).join('') + '</div>' +
+        '<p class="set-note diag-meta">生成于 ' + esc(ago(d.generatedAt)) + ' · 插件 v' + esc(d.version) + '</p>' +
+        '<details class="diag-report"><summary>查看完整报告</summary><pre>' + esc(d.report) + '</pre></details>';
+    }
+    return '<div class="card set-card diag-card" data-diag="' + esc(d.status) + '">' +
+      head + note + body + actions +
+    '</div>';
+  }
+
+  /** One GET on the button click (never on a timer). */
+  function fetchDiagnostics() {
+    if (REMOTE_MODE) return;
+    var d = app.diag;
+    var seq = ++d.seq;
+    d.busy = true;
+    d.error = '';
+    scheduleRender();
+    fetch(DIAG_URL, { headers: { 'Accept': 'application/json' } })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (payload) {
+        if (seq !== d.seq) return;
+        d.busy = false;
+        d.loaded = true;
+        if (!payload || payload.ok === false) {
+          d.error = '自检接口返回异常';
+          scheduleRender();
+          return;
+        }
+        d.status = String(payload.status || 'warn');
+        d.version = String(payload.version || '');
+        d.generatedAt = num(payload.generatedAt) || Date.now();
+        d.checks = arr(payload.checks).map(function (c) {
+          return {
+            id: String((c && c.id) || ''),
+            label: String((c && c.label) || ''),
+            status: String((c && c.status) || 'warn'),
+            detail: String((c && c.detail) || '')
+          };
+        }).filter(function (c) { return c.label !== ''; });
+        d.report = String(payload.report || '');
+        scheduleRender();
+      })
+      .catch(function (err) {
+        if (seq !== d.seq) return;
+        d.busy = false;
+        d.loaded = true;
+        d.error = '自检失败：' + (err && err.message ? err.message : '网络错误');
+        scheduleRender();
+      });
+  }
+
+  function diagCopyReport() {
+    if (!app.diag.report) {
+      toast('还没有可复制的报告，先运行一次自检');
+      return;
+    }
+    copyText(app.diag.report);
+  }
+
   /* ---------- v0.9: approval notifications ---------- */
   function notifySupported() {
     return typeof window.Notification !== 'undefined' && typeof window.Notification.requestPermission === 'function';
@@ -3442,6 +3577,7 @@
         '</div>' +
         '<div class="d-settings-col">' +
           connectionCardHTML() +
+          diagnosticsCardHTML() +
           pwaSectionHTML() +
           aboutCardHTML() +
         '</div>' +
@@ -3510,6 +3646,7 @@
     return '<section class="m-settings">' +
       '<div class="m-page-head"><h2>设置</h2><span>cockpit v' + esc(data().version || '0.1') + '</span></div>' +
       connectionCardHTML() +
+      diagnosticsCardHTML() +
       remoteSectionHTML() +
       capsuleSectionHTML() +
       notifSectionHTML() +
@@ -4120,6 +4257,60 @@
     } catch (err) { /* ignore */ }
   }
 
+  /* v1.1: ?s=<session> is the shareable view. The host already scopes the
+   * frame and the SSE handshake per connection, so a copied link reproduces
+   * exactly what this browser shows (the capsule's "打开指挥台" reuses it). */
+  function sessionFromURL() {
+    try {
+      var value = new URLSearchParams(window.location.search).get('s');
+      return value ? String(value) : '';
+    } catch (err) { return ''; }
+  }
+
+  function syncSessionURL(id) {
+    if (!window.history || typeof window.history.replaceState !== 'function') return;
+    try {
+      var url = new URL(window.location.href);
+      var wanted = id == null ? '' : String(id);
+      if (!wanted) {
+        if (!url.searchParams.has('s')) return;
+        url.searchParams.delete('s');
+      } else {
+        if (url.searchParams.get('s') === wanted) return;
+        url.searchParams.set('s', wanted);
+      }
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    } catch (err) { /* ignore */ }
+  }
+
+  function focusFromURL() {
+    try {
+      var value = new URLSearchParams(window.location.search).get('focus');
+      return value === 'approvals' ? 'approvals' : '';
+    } catch (err) { return ''; }
+  }
+
+  function syncFocusURL() {
+    if (!window.history || typeof window.history.replaceState !== 'function') return;
+    try {
+      var url = new URL(window.location.href);
+      if (!url.searchParams.has('focus')) return;
+      url.searchParams.delete('focus');
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    } catch (err) { /* ignore */ }
+  }
+
+  /** Copy the current view link - one click, no dialog (v1.1). */
+  function copyViewLink() {
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.delete('focus');
+      copyText(url.href);
+    } catch (err) {
+      copyText(window.location.href);
+    }
+  }
+
   function setTab(tab) {
     if (TABS.indexOf(tab) < 0) return;
     if (app.tab === tab) {
@@ -4165,6 +4356,7 @@
     if (app.editing) cancelEdit();
     if (app.ir.key) cancelInterrupt();
     app.selectedSession = id;
+    syncSessionURL(id);
     scheduleRender();   /* optimistic: the clicked row / pill lights up now */
     reconnectStream();  /* independent per-connection selection (?s=) */
     fetchSessionState();
@@ -4206,6 +4398,7 @@
       var gotSession = payload.session && payload.session.id ? String(payload.session.id) : '';
       if (gotSession !== app.selectedSession) {
         app.selectedSession = null;
+        syncSessionURL('');
         reconnectStream();
         toast('该会话已结束，已回到自动视图');
       }
@@ -4235,6 +4428,20 @@
     app.loaded = true;
     app.lastEventAt = Date.now();
     app.aliases = mergeAliases(payload.aliases);
+    /* v1.1: the capsule deep-links "打开指挥台" with ?focus=approvals when a
+     * decision is waiting; reveal the gate once, then drop the intent so a
+     * later refresh does not re-focus. */
+    if (app.focusRequest === 'approvals') {
+      app.focusRequest = '';
+      syncFocusURL();
+      var pending = arr(payload.approvals);
+      if (pending.length) {
+        app.ap.expanded = true;
+        app.scrollApprovals = true;
+        var firstId = approvalId(pending[0]);
+        if (firstId) app.ap.focus = firstId;
+      }
+    }
     if (unchanged) return;
     app.stateSig = sig;
     syncApprovals(payload);
@@ -4721,6 +4928,17 @@
     } else if (action === 'capsule-copy-path') {
       ev.preventDefault();
       capsuleCopyPath();
+    } else if (action === 'copy-view-link') {
+      ev.preventDefault();
+      copyViewLink();
+    } else if (action === 'diag-run') {
+      ev.preventDefault();
+      app.diag.focus = 'diag-run';
+      fetchDiagnostics();
+    } else if (action === 'diag-copy') {
+      ev.preventDefault();
+      app.diag.focus = 'diag-copy';
+      diagCopyReport();
     }
     /* data-action="alias" (the name button) only reacts to dblclick / Enter / long-press */
   });
@@ -4912,6 +5130,11 @@
     app.widths = loadWidths();
     app.order = loadOrder();
     loadRoster();
+    /* v1.1: shareable view links and the capsule's ?focus= deep link are read
+     * before the first frame so the very first stream handshake carries ?s=. */
+    var linkedSession = sessionFromURL();
+    if (linkedSession) app.selectedSession = linkedSession;
+    app.focusRequest = focusFromURL();
     /* v0.6: manifest shortcuts deep-link ?tab= on the mobile tab bar. */
     var linkedTab = tabFromURL();
     if (linkedTab) app.tab = linkedTab;

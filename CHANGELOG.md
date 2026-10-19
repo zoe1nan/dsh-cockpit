@@ -3,6 +3,43 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 1.1.0 — Self-check, shareable views, one-tap capsule
+
+The "less guessing" release: the settings page can tell you what is wrong and
+hand you a report, a link reproduces the view you are looking at, and clicking
+the desktop capsule opens the deck.
+
+### Added
+- **Settings → 自检与诊断 card** (desktop + mobile): one-click self-check of the
+  plugin process, state data, live stream, desktop capsule, HUD bridge, remote
+  access, pending approvals and the DSH host API; each row shows status and
+  detail, and the full report can be copied for a bug report
+  (`GET /cockpit/api/diagnostics`, read-only)
+- **Shareable view links**: the header 「复制链接」 button copies the current URL
+  with the on-screen conversation encoded as `?s=…`; opening the link restores
+  that conversation in the new tab, while each tab keeps its own selection
+- **One-tap capsule** (Windows): clicking the capsule body opens the cockpit —
+  `?focus=approvals` plus an auto-expanded, scrolled-to approval list when
+  something is waiting; the chevron area still toggles the card, dragging still
+  moves the capsule, and when no bridge file is available the old
+  toggle-on-click behavior is kept. Tooltip explains the pending state
+
+### Changed
+- **Idle write cadence**: `hud.json` and `capsule/state.json` are compared
+  without their volatile `at` / `lastAt` timestamps, and an unchanged frame is
+  rewritten at most every 60 s (bridge) or 30 s (capsule) instead of on every
+  timer tick. Visibly identical behavior, far fewer atomic renames and overlay
+  repaints while DSH sits idle
+- `?focus=approvals` is consumed once (and then removed from the URL) so a
+  plain refresh does not re-trigger the focus jump
+
+### Tests
+- `test/diagnostics.test.mjs` covers the frame-signature helpers
+  (`signatureWithout`) and the age formatting used by the diagnostics card;
+  `node --test` now runs 16 tests
+- New CI workflow `.github/workflows/ci.yml`: syntax checks (`index.js`,
+  `client.js`, `public/app.js`), `npm test` and `npm pack --dry-run` on Node 22
+
 ## 1.0.1 — HUD follows the conversation that is working
 
 The desktop capsule used to follow the deck's team session only, so it sat on

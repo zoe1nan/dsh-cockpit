@@ -383,7 +383,10 @@ that is actually working. `team` keeps counting the members of the deck's active
 team, so the badge still reports background agents while a side conversation has
 the capsule's title.
 
-A stale snapshot (older than 120 s) is ignored by the capsule. Settings:
+A stale snapshot (older than 120 s) is ignored by the capsule. Since v1.1 the
+bridge is compared without its volatile `at` timestamp: an unchanged payload is
+rewritten at most every 60 s (keepalive) instead of on every timer tick, so an
+idle host stops churning the file. Settings:
 
 * GET  /cockpit/api/hud-bridge -> { ok, enabled, path, writtenAt, staleMs, bridge }
 * POST /cockpit/api/hud-bridge { enabled: boolean } (same-origin only)
@@ -433,7 +436,15 @@ used most recently, otherwise the deck's active session. It is `null` only when
 DSH lists no session at all. The overlay therefore shows `进行中` whenever any
 conversation is running and falls back to `待命` once nothing is running. The
 frame is rewritten at most every 150 ms (event debounce) and at least every
-second (elapsed time), and only when its content actually changed.
+second (elapsed time), and only when its content actually changed. Since v1.1
+the change test ignores `lastAt`: an unchanged frame is rewritten at most every
+30 s (keepalive).
+
+Clicking the capsule body opens `cockpitUrl`; when the bridge reports pending
+approvals the target gains `?focus=approvals` so the deck expands the approvals
+and scrolls to them (the parameter is consumed once and then removed). The
+chevron area still toggles the expanded card, dragging still moves the capsule,
+and without a fresh bridge the old toggle-on-click behavior is kept.
 
 ### Endpoint
 
@@ -451,3 +462,37 @@ If the old HUD plugin heartbeat file is fresh (20 s), the legacy desktop HUD ove
 is considered running: the built-in capsule does not start (and retries every
 5 s) so the screen never shows two capsules. The deck surfaces this as
 `legacyDetected`.
+
+## Diagnostics (v1.1)
+
+The settings page runs a read-only self-check and shows one row per subsystem.
+The same data can be fetched directly:
+
+`GET /cockpit/api/diagnostics` →
+
+    { ok:true, plugin:"dsh-cockpit", version, generatedAt:<ms>,
+      status:"ok"|"warn"|"fail",
+      host:{ pid, platform, arch, node, uptimeMs },
+      totals:{ sessions, running, streamClients, approvals, capsule, bridge, remote },
+      deck:{ id, title, running } | null,
+      capsuleFocus:{ id, title, running } | null,
+      capsule:{ supported, enabled, running, pid, heartbeatAgeMs, lastError, legacyDetected },
+      bridge:{ enabled, path, ageMs, staleMs },
+      remote:{ enabled, running, secure, port, url },
+      checks:[{ id, label, status:"ok"|"warn"|"fail", detail }],
+      report:"<plain-text report for bug reports>" }
+
+`checks` covers `plugin`, `state`, `stream`, `capsule`, `bridge`, `remote`,
+`approvals` and `host-api`; `status` is the worst row. The endpoint never writes
+anything, never touches the DSH host API and is safe to poll from the settings
+page. `report` is the zh-CN text the 「复制报告」 button copies.
+
+## Shareable view links (v1.1)
+
+The deck header keeps a 「复制链接」 button: it copies the current URL with the
+on-screen conversation encoded as `?s=<sessionId>`. A tab that boots with `?s=`
+starts on that conversation (and its live stream is created for it), so the same
+link opens the same view elsewhere. Switching sessions updates the URL through
+`history.replaceState`; when the selected session disappears the parameter is
+dropped and the deck returns to the automatic view. `?focus=approvals` (used by
+the capsule click-through) is separate: it is consumed once and then removed.
