@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: syntax + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Syntax check
+        run: |
+          node --check index.js
+          node --check client.js
+          node --check public/app.js
+          node --check scripts/preview.mjs
+          node --check scripts/preview-smoke.mjs
+          node --check scripts/check-assets.mjs
+
+      - name: Asset guards
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Preview smoke
+        run: npm run smoke
+
+      - name: Package contents
+        run: npm pack --dry-run
+
+  powershell:
+    name: powershell parse
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $failed = $false
+          $scripts = @(Get-ChildItem -Recurse -Filter *.ps1)
+          if ($scripts.Count -eq 0) {
+            Write-Host 'no .ps1 files found'
+            exit 0
+          }
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($null -ne $errors -and $errors.Count -gt 0) {
+              $failed = $true
+              Write-Host "FAIL $($script.FullName)"
+              $errors | ForEach-Object { Write-Host "  line $($_.Extent.StartLineNumber): $($_.Message)" }
+            } else {
+              Write-Host "parse OK: $($script.FullName)"
+            }
+          }
+          if ($failed) { exit 1 }
