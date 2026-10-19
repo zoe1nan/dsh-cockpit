@@ -2004,7 +2004,7 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
     } else if (remoteStatus.running === true) {
       check('remote', '远程接管', 'ok', `${remoteStatus.secure === true ? 'HTTPS' : 'HTTP'} · ${text(remoteStatus.urlForPhone || remoteStatus.url) || '地址未知'} · ${Array.isArray(remoteStatus.sessions) ? remoteStatus.sessions.length : 0} 台设备`)
     } else {
-      check('remote', '远程接管', 'warn', '未启动（只在手机上用时才需要）')
+      check('remote', '远程接管', 'ok', '未启动（需要手机访问时再开启）')
     }
     check('approvals', '待审批', pending === 0 ? 'ok' : 'warn', pending === 0 ? '没有待审批请求' : `${pending} 个待审批请求（在指挥台里处理）`)
     check('host-api', 'DSH 宿主接口', 'ok', '指挥台的 /cockpit/* 不经过宿主鉴权；宿主 /api/* 需要登录会话，未登录时返回 401 属正常')

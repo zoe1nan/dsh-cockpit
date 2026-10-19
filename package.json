@@ -55,6 +55,7 @@
   },
   "scripts": {
     "preview": "node scripts/preview.mjs",
+    "smoke": "node scripts/preview-smoke.mjs",
     "test": "node --test"
   }
 }

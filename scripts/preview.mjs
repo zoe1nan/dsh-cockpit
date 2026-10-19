@@ -3,8 +3,9 @@
  *
  * Serves `public/` at http://127.0.0.1:6077/cockpit with the demo snapshot from
  * `public/mock-state.json`, a live SSE feed (elapsed clock keeps moving so the
- * layout can be judged while running), and an in-memory alias API so inline
- * renaming can be exercised without a DSH host.
+ * layout can be judged while running), an in-memory alias API so inline
+ * renaming can be exercised without a DSH host, and a read-only diagnostics
+ * mock so the settings self-check card can be exercised end-to-end.
  *
  *   node scripts/preview.mjs [port]
  */
@@ -13,10 +14,13 @@ import { createServer } from 'node:http'
 import { readFileSync, existsSync, statSync } from 'node:fs'
 import { extname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { __internals as cockpitInternals } from '../index.js'
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const PUBLIC = join(ROOT, 'public')
 const MOCK_FILE = join(ROOT, 'mock', 'state.json')
+const PKG = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+const { formatAge, formatSpan } = cockpitInternals
 const PORT = Number(process.argv[2] || 6077)
 
 const MIME = {
@@ -125,6 +129,7 @@ function setRunning(sessionId, running) {
 function shiftTimes(state) {
   const bump = (value) => (typeof value === 'number' && value > 0 ? value + mockAge : value)
   if (state.session) state.session.startedAt = bump(state.session.startedAt)
+  if (state.capsule) state.capsule.startedAt = bump(state.capsule.startedAt)
   for (const key of ['activity', 'sessions']) for (const row of state[key] ?? []) row.at = bump(row.at)
   for (const member of state.team?.members ?? []) member.lastAt = bump(member.lastAt)
   for (const session of state.sessions ?? []) {
@@ -232,6 +237,124 @@ function snapshot(selection = null) {
   return selectSnapshot(state, selection)
 }
 
+/**
+ * Read-only diagnostics mock (v1.1 contract): mirrors what the real plugin's
+ * `/cockpit/api/diagnostics` reports, so the settings self-check card can show
+ * "正常" and 复制报告 works without a DSH host. Every probe is derived from
+ * the preview state; nothing is written.
+ */
+function diagnosticsMock() {
+  const now = Date.now()
+  const state = snapshot()
+  // The demo bridge is always fresh: pretend the host just rewrote hud.json.
+  hudBridge.writtenAt = now
+  if (hudBridge.bridge !== null) hudBridge.bridge.at = now
+  const sessions = Array.isArray(state.sessions) ? state.sessions : []
+  const running = sessions.filter((item) => item.running === true).length
+  const decoratedApprovals = Array.isArray(state.approvals) ? state.approvals : []
+  const pending = decoratedApprovals.filter((entry) => Number(entry.expiresAt) > now).length
+  const bridgeAge = hudBridge.enabled && hudBridge.bridge !== null ? Math.max(0, now - Number(hudBridge.bridge.at ?? now)) : null
+  const heartbeatAge = capsule.heartbeatAt > 0 ? Math.max(0, now - capsule.heartbeatAt) : null
+  const capsuleView = state.capsule ?? null
+  const remote = remoteSnapshot()
+  const uptimeMs = Math.round(process.uptime() * 1000)
+  const describe = (view) => view === null || view === undefined
+    ? '无'
+    : `${String(view.title ?? '未命名')}${view.running === true ? '（运行中）' : ''}`
+  const deckSession = describe(state.session)
+  const capsuleSession = describe(capsuleView)
+  const checks = []
+  const check = (id, label, status, detail) => {
+    checks.push({ id, label, status, detail: String(detail) })
+  }
+  check('plugin', '插件进程', 'ok', `${PKG.version} · ${process.platform} ${process.arch} · Node ${process.versions.node} · 已运行 ${formatSpan(uptimeMs)}`)
+  check('state', '状态数据', 'ok', `会话 ${sessions.length} 个（运行中 ${running}）· 指挥台「${deckSession}」· 胶囊跟随「${capsuleSession}」`)
+  check('stream', '实时流', clients.size > 0 ? 'ok' : 'warn', clients.size > 0 ? `${clients.size} 个客户端已连接` : '当前没有连接的客户端（打开指挥台页面即可恢复）')
+  if (!capsule.supported) {
+    check('capsule', '桌面胶囊', 'warn', '当前系统不支持（仅 Windows）')
+  } else if (!capsule.enabled) {
+    check('capsule', '桌面胶囊', 'warn', '已在设置里关闭')
+  } else if (capsule.running) {
+    check('capsule', '桌面胶囊', 'ok', `进程运行中（pid ${capsule.pid}）· 心跳 ${heartbeatAge === null ? '未知' : formatAge(heartbeatAge)} · 已写入 ${capsule.writes} 帧`)
+  } else {
+    check('capsule', '桌面胶囊', 'fail', capsule.lastError === '' ? '胶囊进程未运行' : `胶囊进程未运行：${capsule.lastError}`)
+  }
+  if (!hudBridge.enabled) {
+    check('bridge', 'HUD 数据桥', 'warn', '已在设置里关闭')
+  } else if (hudBridge.bridge === null) {
+    check('bridge', 'HUD 数据桥', 'warn', '还没有生成 hud.json（插件刚启动或桥接被关闭）')
+  } else {
+    check('bridge', 'HUD 数据桥', 'ok', `已启用 · ${formatAge(bridgeAge ?? 0)}更新`)
+  }
+  if (remote.enabled === false) {
+    check('remote', '远程接管', 'warn', '当前不可用')
+  } else if (remote.running === true) {
+    check('remote', '远程接管', 'ok', `${remote.secure === true ? 'HTTPS' : 'HTTP'} · ${remote.urlForPhone || remote.url || '地址未知'} · ${remote.sessions.length} 台设备`)
+  } else {
+    check('remote', '远程接管', 'ok', '未启动（需要手机访问时再开启）')
+  }
+  check('approvals', '待审批', pending === 0 ? 'ok' : 'warn', pending === 0 ? '没有待审批请求' : `${pending} 个待审批请求（在指挥台里处理）`)
+  check('host-api', 'DSH 宿主接口', 'ok', '指挥台的 /cockpit/* 不经过宿主鉴权；宿主 /api/* 需要登录会话，未登录时返回 401 属正常')
+  const status = checks.some((item) => item.status === 'fail') ? 'fail' : checks.some((item) => item.status === 'warn') ? 'warn' : 'ok'
+  const report = [
+    `dsh-cockpit ${PKG.version} 诊断报告`,
+    `生成时间：${new Date(now).toLocaleString('zh-CN', { hour12: false })}`,
+    `插件路径：${join(ROOT, 'scripts', 'preview.mjs')}（预览 mock）`,
+    `主机：${process.platform} ${process.arch} · Node ${process.versions.node} · 进程 ${process.pid} · 已运行 ${formatSpan(uptimeMs)}`,
+    `会话：${sessions.length} 个（运行中 ${running}）· 指挥台「${deckSession}」· 胶囊跟随「${capsuleSession}」`,
+    `实时流：${clients.size} 个客户端 · 待审批：${pending}`,
+    `胶囊：${!capsule.supported ? '不支持' : capsule.running ? `运行中（pid ${capsule.pid}，心跳 ${heartbeatAge === null ? '未知' : formatAge(heartbeatAge)}）` : '未运行'} · 帧 ${capsule.writes} · 最近写入 ${capsule.writtenAt > 0 ? formatAge(now - capsule.writtenAt) : '—'}`,
+    `HUD 桥：${hudBridge.enabled ? `已启用（${formatAge(bridgeAge ?? 0)}更新）` : '已关闭'}`,
+    `远程接管：${remote.running === true ? remote.urlForPhone || remote.url || '已启动' : '未启动'}`,
+    '---',
+    ...checks.map((item) => `[${item.status}] ${item.label}：${item.detail}`),
+  ]
+  return {
+    ok: true,
+    plugin: 'dsh-cockpit',
+    version: PKG.version,
+    generatedAt: now,
+    status,
+    host: {
+      pid: process.pid,
+      platform: process.platform,
+      arch: process.arch,
+      node: process.versions.node,
+      uptimeMs,
+    },
+    totals: {
+      sessions: sessions.length,
+      running,
+      streamClients: clients.size,
+      approvals: pending,
+      capsule: capsule.running === true,
+      bridge: hudBridge.enabled === true && hudBridge.bridge !== null,
+      remote: remote.running === true,
+    },
+    deck: state.session === null || state.session === undefined ? null : { id: String(state.session.id ?? ''), title: String(state.session.title ?? ''), running: state.session.running === true },
+    capsuleFocus: capsuleView === null ? null : { id: String(capsuleView.id ?? ''), title: String(capsuleView.title ?? ''), running: capsuleView.running === true },
+    capsule: {
+      supported: capsule.supported === true,
+      enabled: capsule.enabled === true,
+      running: capsule.running === true,
+      pid: capsule.pid ?? null,
+      heartbeatAgeMs: heartbeatAge,
+      lastError: capsule.lastError ?? '',
+      legacyDetected: capsule.legacyDetected === true,
+    },
+    bridge: { enabled: hudBridge.enabled === true, path: '~/.dsh/cockpit/hud.json', ageMs: bridgeAge, staleMs: hudBridge.staleMs },
+    remote: {
+      enabled: remote.enabled !== false,
+      running: remote.running === true,
+      secure: remote.secure === true,
+      port: remote.port ?? null,
+      url: remote.urlForPhone || remote.url || '',
+    },
+    checks,
+    report: report.join('\n'),
+  }
+}
+
 function sendJson(res, status, body) {
   const buf = Buffer.from(JSON.stringify(body))
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Length': buf.length })
@@ -283,6 +406,13 @@ const server = createServer(async (req, res) => {
   }
   if (path === '/cockpit/') return sendFile(res, 'index.html')
   if (path === '/cockpit/api/state') return sendJson(res, 200, snapshot(new URL(req.url ?? '/', 'http://localhost').searchParams.get('s')))
+  if (path === '/cockpit/api/diagnostics') {
+    if (req.method !== 'GET') {
+      res.writeHead(405)
+      return res.end()
+    }
+    return sendJson(res, 200, diagnosticsMock())
+  }
   if (path === '/cockpit/api/actions/send') {
     if (req.method !== 'POST') {
       res.writeHead(405)

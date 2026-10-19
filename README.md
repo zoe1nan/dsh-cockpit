@@ -136,6 +136,7 @@ export function apply(ctx) {
 
 ```bash
 npm run preview      # http://127.0.0.1:6077/cockpit/ 本地预览（mock 数据 + 假后端）
+npm run smoke        # 预览冒烟：起服务抓页面 / state / diagnostics / SSE（CI 同款）
 ```
 
 目录：

@@ -48,6 +48,51 @@
     "live": true,
     "lastAt": 1792328250888
   },
+  "capsule": {
+    "id": "sess-lead",
+    "title": "认证模块重构",
+    "running": true,
+    "turn": 12,
+    "startedAt": 1792325760888,
+    "elapsedMs": 2520000,
+    "percent": 60,
+    "completed": 3,
+    "total": 5,
+    "plan": {
+      "steps": [
+        {
+          "text": "梳理现有认证流程",
+          "status": "completed"
+        },
+        {
+          "text": "重构 session 校验逻辑",
+          "status": "completed"
+        },
+        {
+          "text": "登录页表单与校验",
+          "status": "completed"
+        },
+        {
+          "text": "补齐 e2e 登录用例",
+          "status": "in_progress"
+        },
+        {
+          "text": "清理旧版 session 中间件",
+          "status": "pending"
+        }
+      ]
+    },
+    "stats": {
+      "turns": 12,
+      "steps": 31,
+      "llmMs": 274000,
+      "toolMs": 96000,
+      "tokens": 12800
+    },
+    "model": "V4 Pro",
+    "live": true,
+    "lastAt": 1792328250888
+  },
   "team": {
     "members": [
       {
@@ -379,7 +424,7 @@
       "emoji": ""
     }
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "cards": [
     {
       "id": "git-status",
