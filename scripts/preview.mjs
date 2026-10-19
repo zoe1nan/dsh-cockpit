@@ -173,10 +173,15 @@ let hudBridge = {
 }
 /** Pending approvals; the demo seeds one so answer flows can be exercised.
  * Set PREVIEW_APPROVALS=0 to boot without any, which lets the browser tests
- * exercise the ?focus=approvals timeout path (no gate shows up). */
+ * exercise the ?focus=approvals timeout path (no gate shows up).
+ * PREVIEW_APPROVAL_TTL (ms) keeps the demo ask pending longer than the 13 s
+ * countdown so a slow acceptance run can still exercise answer flows. */
 let approvals = process.env.PREVIEW_APPROVALS === '0'
   ? []
   : (mock.approvals ?? []).map((entry) => ({ ...entry }))
+/** How long a seeded ask stays pending (default: the demo's 13 s countdown). */
+const parsedApprovalTtl = Number.parseInt(process.env.PREVIEW_APPROVAL_TTL ?? '', 10)
+const approvalTtl = Number.isFinite(parsedApprovalTtl) && parsedApprovalTtl > 0 ? parsedApprovalTtl : 13_000
 /** When the preview first saw each ask; the demo countdown is anchored to it. */
 const approvalAnchors = new Map()
 const bootAt = Date.now()
@@ -228,7 +233,7 @@ function snapshot(selection = null) {
   state.approvals = approvals.map((entry) => {
     if (!approvalAnchors.has(entry.id)) approvalAnchors.set(entry.id, now)
     const anchor = approvalAnchors.get(entry.id)
-    return { ...entry, requestedAt: anchor - 12000, expiresAt: anchor + 13000 }
+    return { ...entry, requestedAt: anchor - 12000, expiresAt: anchor + approvalTtl }
   })
   if (state.session) {
     state.session.live = true

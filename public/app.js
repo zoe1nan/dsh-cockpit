@@ -623,7 +623,7 @@
       delete app.ap.busy[id];
       app.ap.error[id] = decision;
       scheduleRender();
-      toast('审批提交失败，请重试');
+      toast('审批提交失败，请检查连接后重试', 'error');
     });
   }
 
@@ -1914,7 +1914,7 @@
       .then(function (res) {
         clear();
         if (res.status === 404) {
-          toast('该卡片操作已失效');
+          toast('该卡片操作已失效，请刷新后重试', 'warn');
           scheduleRender();
           refreshState();
           return;
@@ -2063,10 +2063,10 @@
   function remoteErrorText(status, fallback) {
     if (status === 403) return '这台机器不允许远程访问';
     if (status === 429) return '操作太频繁，请稍后再试';
-    if (status === 404) return '远程接口不存在';
-    if (status >= 500) return '远程服务暂时不可用（HTTP ' + status + '）';
-    if (status) return fallback + '（HTTP ' + status + '）';
-    return '网络连接失败，请重试';
+    if (status === 404) return '远程接口不存在，请重启插件后重试';
+    if (status >= 500) return '远程服务暂时不可用（HTTP ' + status + '），请稍后重试';
+    if (status) return fallback + '（HTTP ' + status + '），请稍后重试';
+    return '网络连接失败，请检查网络后重试';
   }
 
   /** Fold a contract-shaped payload into local state (never re-fetches). */
@@ -2262,7 +2262,7 @@
         ok = document.execCommand('copy');
         document.body.removeChild(ta);
       } catch (err) { ok = false; }
-      toast(ok ? '已复制' : '复制失败，请手动选择');
+      toast(ok ? '已复制' : '复制失败，请手动选择', ok ? 'ok' : 'error');
     };
     if (window.navigator.clipboard && window.navigator.clipboard.writeText) {
       window.navigator.clipboard.writeText(value).then(function () { toast('已复制'); }, fallback);
@@ -2375,7 +2375,7 @@
         '<button class="remote-btn ghost" type="button" data-action="remote-pub-clear" data-fk="remote-pub-clear"' +
           (pub.busy ? ' disabled' : '') + '>清除</button>' +
       '</div>' +
-      (pub.error ? '<p class="remote-pub-err" role="alert">' + esc(pub.error) + '</p>' : '') +
+      (pub.error ? '<p class="remote-pub-err set-alert" role="alert">' + esc(pub.error) + '</p>' : '') +
       '<p class="remote-pub-hint">粘贴完整 https 地址；回车保存，Esc 取消编辑。</p>' +
     '</div>';
   }
@@ -2402,7 +2402,7 @@
     }
     if (t.error) {
       return '<div class="remote-tunnel">' + head + intro +
-        '<div class="remote-err" role="alert"><span>' + esc(t.error) + '</span></div>' +
+        '<div class="remote-err set-alert" role="alert"><span>' + esc(t.error) + '</span></div>' +
         '<button class="remote-mini remote-tunnel-retry" type="button" data-action="tunnel-retry" data-fk="tunnel-retry">重试</button>' +
       '</div>';
     }
@@ -2462,7 +2462,7 @@
   function remoteErrorHTML() {
     var msg = app.remote.error;
     if (!msg) return '';
-    return '<div class="remote-err" role="alert"><span>' + esc(msg) + '</span></div>';
+    return '<div class="remote-err set-alert" role="alert"><span>' + esc(msg) + '</span></div>';
   }
 
   /** The phone view of the settings tab: no start/stop controls, only context. */
@@ -2508,7 +2508,7 @@
       else toast('远程访问已开启');
     }).catch(function () {
       r.busy = '';
-      r.error = '网络连接失败，请重试';
+      r.error = '网络连接失败，请检查网络后重试';
       r.focus = 'remote-start';
       scheduleRender();
     });
@@ -2550,7 +2550,7 @@
       toast('远程访问已关闭');
     }).catch(function () {
       r.busy = '';
-      r.error = '网络连接失败，请重试';
+      r.error = '网络连接失败，请检查网络后重试';
       r.focus = 'remote-stop-arm';
       scheduleRender();
     });
@@ -2583,7 +2583,7 @@
       openPair(payload.pair);
     }).catch(function () {
       r.busy = '';
-      r.error = '网络连接失败，请重试';
+      r.error = '网络连接失败，请检查网络后重试';
       r.focus = 'remote-pair';
       scheduleRender();
     });
@@ -2612,7 +2612,7 @@
       toast('已断开该设备');
     }).catch(function () {
       r.busy = '';
-      r.error = '网络连接失败，请重试';
+      r.error = '网络连接失败，请检查网络后重试';
       scheduleRender();
     });
   }
@@ -2640,7 +2640,7 @@
       toast('已断开全部设备');
     }).catch(function () {
       r.busy = '';
-      r.error = '网络连接失败，请重试';
+      r.error = '网络连接失败，请检查网络后重试';
       scheduleRender();
     });
   }
@@ -2707,7 +2707,7 @@
       toast(clear ? '已清除公网地址' : '公网地址已保存');
     }).catch(function () {
       pub.busy = false;
-      pub.error = '网络连接失败，请重试';
+      pub.error = '网络连接失败，请检查网络后重试';
       app.remote.focus = clear ? 'remote-pub-clear' : 'remote-pub-save';
       scheduleRender();
     });
@@ -2728,7 +2728,7 @@
           sel.addRange(range);
         }
       } catch (e) { /* selection is best-effort */ }
-      toast('复制失败，请手动复制');
+      toast('复制失败，请手动复制', 'error');
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(value).then(function () {
@@ -2924,7 +2924,7 @@
     }).catch(function () {
       if (!app.pair) return;
       app.pair.busy = '';
-      app.pair.error = '网络连接失败，请重试';
+      app.pair.error = '网络连接失败，请检查网络后重试';
       app.pair.focus = 'pair-new';
       renderPair();
     });
@@ -2948,7 +2948,7 @@
     }
     if (act === 'pair-copy-url') {
       if (app.remote.url) copyText(app.remote.url);
-      else toast('暂时没有可用地址');
+      else toast('暂时没有可用地址', 'warn');
       return;
     }
     if (act === 'pair-new') {
@@ -3195,7 +3195,7 @@
       if (!res.ok || !payload || payload.ok === false) {
         c.enabled = prev;             /* roll the switch back on failure */
         c.heartbeatStale = capsuleHeartbeatStale();
-        c.actionError = '设置失败，请重试';
+        c.actionError = '设置失败，请检查胶囊进程后重试';
         c.focus = 'capsule-toggle';
         scheduleRender();
         return;
@@ -3220,14 +3220,14 @@
       c.busy = false;
       c.enabled = prev;
       c.heartbeatStale = capsuleHeartbeatStale();
-      c.actionError = '设置失败，请重试';
+      c.actionError = '设置失败，请检查胶囊进程后重试';
       c.focus = 'capsule-toggle';
       scheduleRender();
     });
   }
 
   function capsuleCopyPath() {
-    if (!app.capsule.statePath) { toast('暂时没有状态文件路径'); return; }
+    if (!app.capsule.statePath) { toast('暂时没有状态文件路径，请稍后重试', 'warn'); return; }
     copyText(app.capsule.statePath);
   }
 
@@ -3245,7 +3245,7 @@
     }
     if (c.error) {
       return '<div class="card set-card hud-card" data-capsule="error">' + head + note +
-        '<div class="hud-err-row" role="alert"><span>' + esc(c.error) + '</span>' +
+        '<div class="hud-err-row set-alert" role="alert"><span>' + esc(c.error) + '</span>' +
           '<button class="remote-mini hud-retry" type="button" data-action="capsule-retry" data-fk="capsule-retry">重试</button>' +
         '</div>' +
       '</div>';
@@ -3261,7 +3261,7 @@
       (c.running ? 'running' : c.enabled ? 'starting' : 'stopped') + '">' +
       head +
       note +
-      (c.enabled && c.lastError ? '<p class="hud-fail" role="alert">' + esc(c.lastError) + '</p>' : '') +
+      (c.enabled && c.lastError ? '<p class="hud-fail set-alert" role="alert">' + esc(c.lastError) + '</p>' : '') +
       '<div class="kv hud-kv"><span>最近状态帧</span><b class="hud-rel" data-rel-at="' +
         (c.writtenAt ? esc(String(c.writtenAt)) : '') + '">' +
         esc(c.writtenAt ? ago(c.writtenAt) : '—') + '</b></div>' +
@@ -3278,7 +3278,7 @@
         '<span class="remote-copy">' + ICON_LINK + '复制</span>' +
       '</button>' +
       capsuleSwitchHTML() +
-      (c.actionError ? '<p class="hud-err" role="alert">' + esc(c.actionError) + '</p>' : '') +
+      (c.actionError ? '<p class="hud-err set-alert" role="alert">' + esc(c.actionError) + '</p>' : '') +
       (c.legacyDetected
         ? '<div class="hud-warn" role="status">检测到旧版桌面 HUD 仍在运行，请先停用它以免重叠</div>'
         : '') +
@@ -3312,7 +3312,7 @@
     '</div>';
     var body;
     if (d.error) {
-      body = '<p class="hud-fail" role="alert">' + esc(d.error) + '</p>';
+      body = '<p class="hud-fail set-alert" role="alert">' + esc(d.error) + '</p>';
     } else if (!d.loaded) {
       body = '<p class="set-note diag-loading">检查插件接口、桌面胶囊、HUD 数据桥与远程接管是否正常。</p>';
     } else {
@@ -3349,7 +3349,7 @@
         d.busy = false;
         d.loaded = true;
         if (!payload || payload.ok === false) {
-          d.error = '自检接口返回异常';
+          d.error = '自检接口返回异常，请稍后重试';
           scheduleRender();
           return;
         }
@@ -3371,14 +3371,14 @@
         if (seq !== d.seq) return;
         d.busy = false;
         d.loaded = true;
-        d.error = '自检失败：' + (err && err.message ? err.message : '网络错误');
+        d.error = '自检失败：' + (err && err.message ? err.message : '网络错误') + '；请稍后重试';
         scheduleRender();
       });
   }
 
   function diagCopyReport() {
     if (!app.diag.report) {
-      toast('还没有可复制的报告，先运行一次自检');
+      toast('还没有可复制的报告，先运行一次自检', 'warn');
       return;
     }
     copyText(app.diag.report);
@@ -3439,7 +3439,7 @@
         '<span class="remote-status ' + badgeCls + '"><i aria-hidden="true"></i>' + esc(badgeText) + '</span>' +
       '</div>' +
       body +
-      (n.error ? '<p class="remote-pub-err" role="alert">' + esc(n.error) + '</p>' : '') +
+      (n.error ? '<p class="remote-pub-err set-alert" role="alert">' + esc(n.error) + '</p>' : '') +
     '</div>';
   }
 
@@ -3460,7 +3460,7 @@
       settled = true;
       n.busy = false;
       var now = perm || notifyPermission();
-      n.error = now === 'denied' ? '通知已被浏览器拒绝' : '';
+      n.error = now === 'denied' ? '通知已被浏览器拒绝，请在站点设置里恢复权限后重试' : '';
       app.notify.focus = 'notif-enable';
       scheduleRender();
       if (now === 'granted') toast('通知已开启');
@@ -3472,7 +3472,7 @@
           if (settled) return;
           settled = true;
           n.busy = false;
-          n.error = '请求通知权限失败';
+          n.error = '请求通知权限失败，请稍后重试';
           scheduleRender();
         });
       }
@@ -3489,7 +3489,7 @@
   function notifTest() {
     var n = app.notify;
     if (notifyPermission() !== 'granted') {
-      n.error = '通知权限尚未开启';
+      n.error = '通知权限尚未开启，请先开启通知';
       scheduleRender();
       return;
     }
@@ -3505,7 +3505,7 @@
       };
       toast('已发送测试通知');
     } catch (e) {
-      n.error = '发送通知失败';
+      n.error = '发送通知失败，请检查系统通知设置后重试';
       scheduleRender();
     }
   }
@@ -3556,7 +3556,8 @@
     var ms = orderedMembers();
     var rows = ms.length ? ms.map(function (m) {
       var meta = memberMeta(m);
-      return '<div class="alias-row">' +
+      var pending = app.pendingAlias && app.pendingAlias.id === m.id;
+      return '<div class="alias-row' + (pending ? ' is-pending' : '') + '">' +
         '<span class="mini av-' + meta.color + '">' + esc(meta.letter) + '</span>' +
         '<div class="alias-info"><b>' + esc(meta.display) + '</b><span>' + esc(meta.real) + '</span></div>' +
         (meta.alias
@@ -4141,7 +4142,7 @@
       scheduleRender();
     }).catch(function () {
       app.ir.busy = false;
-      app.ir.error = '网络连接失败，请重试';
+      app.ir.error = '网络连接失败，请检查网络后重试';
       scheduleRender();
     });
   }
@@ -4203,7 +4204,7 @@
       if (prev) rollback[id] = prev; else delete rollback[id];
       app.aliases = rollback;
       scheduleRender();
-      toast('别名保存失败，请检查连接后重试');
+      toast('别名保存失败，请检查连接后重试', 'error');
     });
   }
 
@@ -4234,7 +4235,7 @@
         app.aliases = mergeAliases(app.aliases);
         app.aliases[id] = prev;
         scheduleRender();
-        toast('恢复失败，请稍后重试');
+        toast('恢复失败，请稍后重试', 'error');
       });
   }
 
@@ -4367,7 +4368,7 @@
         app.selectedManual = false;
         reconnectStream();
         scheduleRender();
-        toast('切换会话失败，已回到自动视图');
+        toast('切换会话失败，已回到自动视图', 'warn');
       });
   }
 
@@ -4385,13 +4386,20 @@
     fetchSessionState();
   }
 
-  function toast(message) {
+  /* One toast for the whole panel. `tone` decides how long it stays:
+     success 2.4 s, warning 3.6 s, error 4.8 s — failures need the time to
+     read the suggested next step. */
+  function toast(message, tone) {
     var el = document.getElementById('toast');
     if (!el) return;
+    var kind = tone === 'warn' || tone === 'error' ? tone : 'ok';
     el.textContent = message;
+    el.dataset.tone = kind;
     el.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2400);
+    toastTimer = setTimeout(function () {
+      el.classList.remove('show');
+    }, kind === 'error' ? 4800 : kind === 'warn' ? 3600 : 2400);
   }
 
   /* ---------- state plumbing ---------- */
@@ -4428,7 +4436,7 @@
         /* v1.2: a stale ?s= bookmark (shared link, reload, bookmark) returns to
          * the automatic view silently; only a session the user picked by hand
          * earns an explanation. */
-        if (wasManual) toast('该会话已结束，已回到自动视图');
+        if (wasManual) toast('该会话已结束，已回到自动视图', 'warn');
       }
     }
     /* v0.5: an open inline rename owns the rail. Buffer frames instead of
@@ -4748,7 +4756,7 @@
     if (i < 0) return;
     var j = i + delta;
     if (j < 0 || j >= ids.length) {
-      toast(delta < 0 ? '已经在最前面了' : '已经在最后面了');
+      toast(delta < 0 ? '已经在最前面了' : '已经在最后面了', 'warn');
       return;
     }
     ids.splice(j, 0, ids.splice(i, 1)[0]);
@@ -4927,7 +4935,7 @@
     } else if (action === 'remote-copy-url') {
       ev.preventDefault();
       if (app.remote.url) copyText(app.remote.url);
-      else toast('还没有可复制的地址');
+      else toast('还没有可复制的地址', 'warn');
     } else if (action === 'remote-revoke') {
       ev.preventDefault();
       remoteRevoke(actionEl.dataset.id);
