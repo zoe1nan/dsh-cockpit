@@ -303,6 +303,22 @@
   ],
   "activity": [
     {
+      "at": 1792328240888,
+      "kind": "tool",
+      "agent": "lead",
+      "agentId": "sess-lead",
+      "text": "运行命令",
+      "detail": "git -C ~/work/demo-app status --short"
+    },
+    {
+      "at": 1792328238888,
+      "kind": "tool",
+      "agent": "lead",
+      "agentId": "sess-lead",
+      "text": "运行命令",
+      "detail": "git -C ~/work/demo-app log --oneline -3"
+    },
+    {
       "at": 1792328235888,
       "kind": "tool",
       "agent": "lead",

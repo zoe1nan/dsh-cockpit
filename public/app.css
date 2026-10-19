@@ -755,6 +755,13 @@ code { font-family: var(--mono); }
   word-break: break-all;
 }
 .it .it-txt .dim { color: var(--muted); font-size: 11.5px; }
+.it .it-n {
+  margin-left: 4px; padding: 0 5px; border-radius: 999px;
+  background: rgba(77, 107, 254, .09); color: var(--brand);
+  font-family: var(--mono); font-size: 9.5px; font-weight: 650;
+  vertical-align: 1px; white-space: nowrap;
+}
+[data-theme="dark"] .it .it-n { background: rgba(143, 163, 255, .14); color: #BFD0FF; }
 .it.now .it-txt { color: var(--ink); }
 .it.now .it-icon { background: var(--brand); color: #fff; box-shadow: 0 6px 14px -6px rgba(77, 107, 254, .8); }
 .it.now { position: relative; }

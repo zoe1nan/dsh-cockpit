@@ -1619,28 +1619,73 @@
     '</section>';
   }
 
+  /* v1.2 (B1): the live stream used to print one row per tool call, so a busy
+     agent could flood the card with "运行命令 / 运行命令 / 运行命令". Runs of the
+     same gesture (same agent, same tool, same label, back to back) now fold into
+     one row with a "×N" badge; the older commands stay available in the badge
+     tooltip, and empty or placeholder details are dropped instead of rendering
+     an empty "· ". Only the view changes — the host payload keeps every event. */
+  function cleanDetail(value) {
+    var text = String(value == null ? '' : value).trim();
+    if (!text) return '';
+    text = text.replace(/^["'`]+|["'`]+$/g, '').trim();
+    if (!text || text === '—' || text === '{}' || text === '[]' || text === 'null' || text === 'undefined') return '';
+    return text;
+  }
+
+  function foldActivity(acts) {
+    var groups = [];
+    arr(acts).forEach(function (a) {
+      if (!a || typeof a !== 'object') return;
+      var kind = String(a.kind || '');
+      var text = String(a.text == null ? '' : a.text).trim();
+      var who = activityWho(a);
+      var detail = cleanDetail(a.detail);
+      var last = groups[groups.length - 1] || null;
+      if (last && kind === 'tool' && text !== '' && last.kind === kind && last.text === text && last.who === who.real) {
+        last.count += 1;
+        if (detail) last.notes.push(detail);
+        return;
+      }
+      groups.push({ item: a, count: 1, kind: kind, text: text, who: who.real, notes: detail ? [detail] : [] });
+    });
+    groups.forEach(function (group) {
+      group.detail = group.notes.length ? group.notes[0] : '';
+      group.detailTitle = group.notes.length > 1 ? group.notes.slice(0, 3).join('  |  ') : group.detail;
+    });
+    return groups;
+  }
+
   function streamCardHTML(extra) {
     var acts = activity();
+    var groups = foldActivity(acts);
     var head = '<div class="card-head"><h3>实时流</h3>' +
       (acts.length ? '<span class="r" data-rel-at="' + (num(acts[0].at) == null ? '' : num(acts[0].at)) + '">' + esc(ago(acts[0].at)) + '</span>' : '<span class="r">—</span>') +
       '</div>';
-    var body = acts.length
-      ? '<div class="items" data-scroll="stream">' + acts.map(streamItemHTML).join('') + '</div>'
+    var body = groups.length
+      ? '<div class="items" data-scroll="stream">' + groups.map(streamItemHTML).join('') + '</div>'
       : '<div class="stream-empty">暂无活动</div>';
-    return '<section class="card stream-card ' + extra + (acts.length ? '' : ' is-empty') + '">' + head + body + '</section>';
+    return '<section class="card stream-card ' + extra + (groups.length ? '' : ' is-empty') + '">' + head + body + '</section>';
   }
 
-  function streamItemHTML(a, index) {
+  function streamItemHTML(group, index) {
+    var a = group && group.item ? group.item : group;
+    var count = group && group.count ? group.count : 1;
     var kind = KINDS[a && a.kind] || { icon: '•', cls: '' };
     var who = activityWho(a);
-    var detail = a && a.detail
-      ? ' <span class="dim" data-action="expand" title="' + esc(a.detail) + '">· ' + richText(a.detail) + '</span>'
+    var detail = group && group.detail ? group.detail : cleanDetail(a && a.detail);
+    var detailTitle = group && group.detailTitle ? group.detailTitle : detail;
+    var detailHTML = detail
+      ? ' <span class="dim" data-action="expand" title="' + esc(detailTitle) + '">· ' + richText(detail) + '</span>'
+      : '';
+    var countHTML = count > 1
+      ? ' <span class="it-n" title="' + esc(count + ' 次同类操作' + (detailTitle ? ' · ' + detailTitle : '')) + '">×' + count + '</span>'
       : '';
     return '<div class="it' + (index === 0 ? ' now' : '') + '">' +
       '<span class="it-time" data-rel-at="' + (num(a && a.at) == null ? '' : num(a.at)) + '">' + esc(ago(a && a.at)) + '</span>' +
       '<span class="it-icon ' + kind.cls + '" aria-hidden="true">' + kind.icon + '</span>' +
       '<div class="it-txt"><span class="ag av-' + who.color + '">' + esc(who.display) + '</span>' +
-        richText(a && a.text) + detail +
+        richText(a && a.text) + countHTML + detailHTML +
       '</div>' +
     '</div>';
   }
