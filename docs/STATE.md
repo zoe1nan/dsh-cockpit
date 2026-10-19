@@ -1,8 +1,12 @@
-# Cockpit state contract (v0.1)
+# Cockpit state contract (v1.1)
 
 The plugin serves the whole app under `/cockpit`. The page is static; all live data
 comes from two endpoints. Everything below is JSON over HTTP — no build step, no
 framework.
+
+Since v1.1 the plugin also exposes read-only helpers under the same `/cockpit/api`
+prefix (`diagnostics` is documented at the end of this file); they never mutate
+host state.
 
 ## GET /cockpit/api/state
 

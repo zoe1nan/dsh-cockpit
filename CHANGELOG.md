@@ -36,7 +36,7 @@ the desktop capsule opens the deck.
 ### Tests
 - `test/diagnostics.test.mjs` covers the frame-signature helpers
   (`signatureWithout`) and the age formatting used by the diagnostics card;
-  `node --test` now runs 16 tests
+  `node --test` now runs 18 tests
 - New CI workflow `.github/workflows/ci.yml`: syntax checks (`index.js`,
   `client.js`, `public/app.js`), `npm test` and `npm pack --dry-run` on Node 22
 
