@@ -2,7 +2,7 @@
 
 > 当前版本：**v1.2.0**（已发布 2026-10-19 → [Release v1.2.0](https://github.com/zoe1nan/dsh-cockpit/releases/tag/v1.2.0)）。
 > 发布方式：本机 git 协议不可用，经 GitHub REST API 把 1.0.1 / 1.1.0 / 1.2.0 的提交补放到 `main`（fast-forward，原有 7 stars 与 v1.0.0 Release 均保留）；1.0.1 / 1.1.0 同时补了 tag。
-> ⚠️ 仓库暂缺 `.github/workflows/ci.yml`：发布所用 token 无 `workflow` scope，文件在本地仓库里；补推需带 workflow 权限的 token，或直接在网页 UI 添加。
+> CI：`.github/workflows/ci.yml` 已通过网页 UI 补入仓库，首次运行（syntax + tests / powershell parse 两个 job）全部通过。
 > 本版路线图：2026-10-19 重梳理（v1.1.0 落地后，基于代码/文档走查 + 联调 harness 结果）。
 > 更新规则：每完成一项，在 CHANGELOG 留一行并移入本文「已完成」；新想法先入 backlog，不直接插队。
 
@@ -26,7 +26,7 @@
 - 可分享视图链接：顶栏「复制链接」→ `?s=` 恢复 + `history.replaceState` 同步；`?focus=approvals` 一次性深链
 - 胶囊点击收敛：点本体打开指挥台（待审批时直达审批区），箭头区切展开，拖拽不变，桥缺失回退旧行为
 - 空闲写入节流：`hud.json` 60 s / 胶囊帧 30 s keepalive（此前每秒重写）
-- `node:test` 18 例 + GitHub Actions CI（syntax / test / pack；workflow 文件见本机仓库，GitHub 仓库待补推，见文首说明）
+- `node:test` 18 例 + GitHub Actions CI（syntax / test / pack）
 - HUD 跟随修复（1.0.1 `f4c8c08`）随版本发布
 
 ### v1.2.0 已完成并发布（2026-10-19）
@@ -215,7 +215,7 @@
 4. 远程访问需要桌面端 DSH 保持运行；没有内置 TLS（需隧道或反代）
 5. teammate 遥测依赖 DSH 投影与 agent 服务，上游变更可能降级（兼容层未做）
 6. 任务板以只读展示为主，写操作集中在审批/消息/中断
-7. 6 套历史集成 harness 仍在 `tmp/`（单测 18 例 + 本地 CI workflow 已入库；GitHub 仓库的 workflow 待补推，见文首说明）
+7. 6 套历史集成 harness 仍在 `tmp/`（单测 18 例 + CI workflow 已入库，并在 GitHub Actions 跑通）
 8. npm 包名 `dsh-cockpit` 已被占用，npm 发布需换名（GitHub Release 不受影响）
 9. 本机 git 到 github.com 不通，发布依赖 token API 通道（2026-10-19 已用一次性脚本完成 v1.2.0 发布；C1 `scripts/release.mjs` 仍未做）
 
