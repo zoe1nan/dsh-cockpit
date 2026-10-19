@@ -29,6 +29,23 @@
 - `node:test` 18 例 + GitHub Actions CI（syntax / test / pack）
 - HUD 跟随修复（1.0.1 `f4c8c08`）随版本发布
 
+### v1.2.0 进行中（2026-10-19，本地提交，未发布）
+
+今日必做 7 项 + 1 项可选项已完成并单项提交：
+
+- D2 `9b3c5e4`：preview 补齐 `diagnostics` 假数据与 `capsule` mock，新增 `scripts/preview-smoke.mjs`（26 项冒烟）
+- D3 `8d1c73b`：`scripts/check-assets.mjs` 资产守卫（ps1 BOM/编码/换行、css 括号、版本一致性）；CI 增加 windows PowerShell 解析 job 与 preview smoke
+- D4/D5 `7af7705`：失效 `?s=` 静默回落；`?focus=approvals` 最多等 3 帧 / 5 s，超时静默清理
+- A1 `71c7bd8`：设置页信息层级与卡头统一（连接/设备 → 胶囊 → 自检 → 通知 → 别名 → 关于；窄屏 order 同步）
+- A2 `2a46420`：反馈语气/时长统一（ok 2.4 s / warn 3.6 s / error 4.8 s）+ 内联错误统一 `.set-alert` + 失败文案给出下一步
+- A4 `d946acb`：胶囊 hover 高亮 + 待审批琥珀描边（140/180 ms 淡入淡出，点击/拖拽/箭头区不变）
+- B1 `b42d901`：活动流同类工具调用折叠「×N」+ 过滤空 detail（仅视图层，host 事件不丢）
+
+结论与调整：
+
+- B2「渲染签名补全」经代码核对**已无必要**：`stateSignature()` 本就覆盖除 `now` / `session.elapsedMs` 外的全部 payload（含 approvals/remote/capsule），未变化时 `applyState` 直接返回、不重绘。进一步优化需把「整树重建」改为局部 patch，属 v1.3 范围，已移出今日清单。
+- D6 启动回放、D7 实机验收 + 截图、D8 术语文案统一按计划留到下一工作日；C1 `scripts/release.mjs` + GitHub 上传等 token 到位后一起做。
+
 ---
 
 ## 1. 今天的走查结论（v1.2 的依据）
