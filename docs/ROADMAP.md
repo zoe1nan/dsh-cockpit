@@ -1,8 +1,8 @@
 # Cockpit 路线图与优化清单
 
-> 当前版本：**v1.2.0**（本地提交，待发布；1.0.1 / 1.1.0 / 1.2.0 将一并推送）。
-> ⚠️ 发布状态：GitHub 网络受限（`git fetch`/`ls-remote` 均 Connection reset，`api.github.com` ENOTFOUND），
-> **线上仓库仍是 v1.0.0；1.0.1 / 1.1.0 / 1.2.0 待 token + 网络就绪后一次性推送并发 Release。**
+> 当前版本：**v1.2.0**（已发布 2026-10-19 → [Release v1.2.0](https://github.com/zoe1nan/dsh-cockpit/releases/tag/v1.2.0)）。
+> 发布方式：本机 git 协议不可用，经 GitHub REST API 把 1.0.1 / 1.1.0 / 1.2.0 的提交补放到 `main`（fast-forward，原有 7 stars 与 v1.0.0 Release 均保留）；1.0.1 / 1.1.0 同时补了 tag。
+> ⚠️ 仓库暂缺 `.github/workflows/ci.yml`：发布所用 token 无 `workflow` scope，文件在本地仓库里；补推需带 workflow 权限的 token，或直接在网页 UI 添加。
 > 本版路线图：2026-10-19 重梳理（v1.1.0 落地后，基于代码/文档走查 + 联调 harness 结果）。
 > 更新规则：每完成一项，在 CHANGELOG 留一行并移入本文「已完成」；新想法先入 backlog，不直接插队。
 
@@ -26,10 +26,10 @@
 - 可分享视图链接：顶栏「复制链接」→ `?s=` 恢复 + `history.replaceState` 同步；`?focus=approvals` 一次性深链
 - 胶囊点击收敛：点本体打开指挥台（待审批时直达审批区），箭头区切展开，拖拽不变，桥缺失回退旧行为
 - 空闲写入节流：`hud.json` 60 s / 胶囊帧 30 s keepalive（此前每秒重写）
-- `node:test` 18 例 + GitHub Actions CI（syntax / test / pack）
+- `node:test` 18 例 + GitHub Actions CI（syntax / test / pack；workflow 文件见本机仓库，GitHub 仓库待补推，见文首说明）
 - HUD 跟随修复（1.0.1 `f4c8c08`）随版本发布
 
-### v1.2.0 已完成（2026-10-19，本地提交，待发布）
+### v1.2.0 已完成并发布（2026-10-19）
 
 今日必做 7 项 + 1 项可选项已完成并单项提交：
 
@@ -44,7 +44,7 @@
 结论与调整：
 
 - B2「渲染签名补全」经代码核对**已无必要**：`stateSignature()` 本就覆盖除 `now` / `session.elapsedMs` 外的全部 payload（含 approvals/remote/capsule），未变化时 `applyState` 直接返回、不重绘。进一步优化需把「整树重建」改为局部 patch，属 v1.3 范围，已移出今日清单。
-- 发布前已同步：`package.json` / `mock/state.json` / `README` 安装命令 / `CHANGELOG` 顶部 / `docs/STATE.md` 抬头全部升到 v1.2.0。
+- 发布时已同步：`package.json` / `mock/state.json` / `README` 安装命令 / `CHANGELOG` 顶部 / `docs/STATE.md` 抬头全部升到 v1.2.0；随后通过 GitHub API 发布（tag `v1.2.0` + Release 附件 `dsh-cockpit-1.2.0.tgz` / `.sha256`）。
 - D6 启动回放、D8 术语文案统一留到发布后的下一个补丁；D7 实机验收改为发布后立刻做（重载插件 → 检查 8 项）。C1 `scripts/release.mjs` 在 token + 网络就绪后随发布一起做。
 
 ---
@@ -55,7 +55,7 @@
 
 - `CHANGELOG.md` 1.1.0 段曾写「16 tests」，实际 **18**；`ROADMAP` 两处「16 条」同理（已统一）。
 - `docs/STATE.md` 抬头曾为 `contract (v0.1)`，但 1.0.1 / 1.1.0 都改过契约（capsule 字段、诊断端点、分享链接）→ 已升 v1.1 并补充只读助手端点说明。
-- 本文之前写「v1.1.0 已发布到 GitHub」，与事实不符（见顶部发布状态，已改为「本地未推送」）。
+- 本文之前写「v1.1.0 已发布到 GitHub」，与事实不符（当时确实只在本机；现已于 2026-10-19 一并补发）。
 
 ### 1.2 预览/联调缺口
 
@@ -93,7 +93,7 @@
 
 | 编号 | 事项 | 做法 | 验收 | 量级 |
 | --- | --- | --- | --- | --- |
-| D1 | 文档校准 ✅ | 已完成（本版路线图提交）：CHANGELOG 16→18；STATE.md 契约头升 v1.1 并注明只读助手端点；发布状态写明「本地未推送」；ROADMAP 数量/状态同步 | `grep -rn "16 tests\|16 条"` 除 §1.1 历史说明外为空；三份文档版本/状态一致 | — |
+| D1 | 文档校准 ✅ | 已完成（本版路线图提交）：CHANGELOG 16→18；STATE.md 契约头升 v1.1 并注明只读助手端点；发布状态按当时实际写明（2026-10-19 已发布，见文首）；ROADMAP 数量/状态同步 | `grep -rn "16 tests\|16 条"` 除 §1.1 历史说明外为空；三份文档版本/状态一致 | — |
 | D2 | preview 补齐 | `preview.mjs` 加 `/api/diagnostics` 假数据；`mock/state.json` 升 1.2.0 并补 `capsule` 字段；设置页「自检」在 preview 里可点 | `npm run preview` → 设置页自检卡显示「正常」，可展开报告 | 0.25 d |
 | D3 | CI 守卫 | 加 `ps1 BOM` 检查脚本、`pwsh -File` 解析 overlay.ps1、`app.css` 括号平衡检查、preview 冒烟（起 6077 抓 `/cockpit/` 200） | CI 全绿；故意去掉 BOM 时 CI 失败 | 0.5 d |
 | D4 | 失效 `?s=` 静默回落 | 区分「URL 带来的选择」与「用户手选」：来自 URL 的失效选择不弹 toast，直接换自动视图并清 URL | 旧链接打开无 toast；正常切换仍有提示 | 0.1 d |
@@ -215,13 +215,15 @@
 4. 远程访问需要桌面端 DSH 保持运行；没有内置 TLS（需隧道或反代）
 5. teammate 遥测依赖 DSH 投影与 agent 服务，上游变更可能降级（兼容层未做）
 6. 任务板以只读展示为主，写操作集中在审批/消息/中断
-7. 6 套历史集成 harness 仍在 `tmp/`（单测 18 例 + CI 已入库）
+7. 6 套历史集成 harness 仍在 `tmp/`（单测 18 例 + 本地 CI workflow 已入库；GitHub 仓库的 workflow 待补推，见文首说明）
 8. npm 包名 `dsh-cockpit` 已被占用，npm 发布需换名（GitHub Release 不受影响）
-9. 本机 git 到 github.com 不通，发布依赖 token API 通道（C1 未做前只能本地提交）
+9. 本机 git 到 github.com 不通，发布依赖 token API 通道（2026-10-19 已用一次性脚本完成 v1.2.0 发布；C1 `scripts/release.mjs` 仍未做）
 
 ---
 
 ## 7. 需要拍板
+
+> 2026-10-19 更新：第 1 项（v1.2 范围）已按建议落地并发布 v1.2.0；第 3 项（token / 发布）本次改用一次性 API 脚本完成，C1 `release.mjs` 仍待做；第 5 项（截图）随 D7 实机验收处理；第 2/4/6 项仍待拍板。
 
 1. **v1.2 范围**：按 §2 建议（D1–D5、D8 + A1–A4 + B1–B2）先做一轮，还是缩到「只修 bug + 文档校准」的 patch（1.1.1）？
 2. **D6 启动回放**：本轮做（体验直接受益，但动 Tracker 状态机），还是排 v1.3？
