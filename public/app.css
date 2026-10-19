@@ -2855,12 +2855,16 @@ body.is-reordering * { user-select: none !important; }
 @media (max-width: 899px) {
   .d-settings-cols { flex-direction: column; align-items: stretch; }
   .d-settings-col { display: contents; }
-  .d-settings-cols > .d-settings-col > .remote-card { order: 1; }
-  .d-settings-cols > .d-settings-col > .hud-card { order: 2; }
-  .d-settings-cols > .d-settings-col > .conn-card { order: 3; }
-  .d-settings-cols > .d-settings-col > .pwa-card { order: 4; }
-  .d-settings-cols > .d-settings-col > .alias-card { order: 5; }
-  .d-settings-cols > .d-settings-col > .about-card { order: 6; }
+  /* v1.2 A1: narrow screens keep the documented chain — connection/device,
+   * capsule, self-check, notifications, aliases, about. */
+  .d-settings-cols > .d-settings-col > .conn-card { order: 1; }
+  .d-settings-cols > .d-settings-col > .remote-card { order: 2; }
+  .d-settings-cols > .d-settings-col > .pwa-card { order: 3; }
+  .d-settings-cols > .d-settings-col > .hud-card { order: 4; }
+  .d-settings-cols > .d-settings-col > .diag-card { order: 5; }
+  .d-settings-cols > .d-settings-col > .notif-card { order: 6; }
+  .d-settings-cols > .d-settings-col > .alias-card { order: 7; }
+  .d-settings-cols > .d-settings-col > .about-card { order: 8; }
   .d-settings { padding: 14px 16px 18px; }
 }
 /* an empty session (no deck columns) keeps the settings page full width */

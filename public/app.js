@@ -1972,7 +1972,7 @@
       '</details>';
     }
     return '<div class="card set-card pwa-card" data-pwa="' + (standalone ? 'standalone' : (installable ? 'installable' : 'browser')) + '">' +
-      '<h3>离线与安装</h3>' +
+      '<div class="remote-head"><h3>离线与安装</h3></div>' +
       '<div class="kv"><span>应用</span><b class="' + (standalone || installable ? 'ok' : '') + '">' + esc(status) + '</b></div>' +
       '<div class="kv"><span>离线外壳</span><b class="' + (app.pwa.swActive ? 'ok' : 'warn') + '">' + esc(swText) + '</b></div>' +
       how +
@@ -3408,23 +3408,31 @@
     if (perm === 'unsupported') {
       badgeText = '不支持';
       body = '<p class="set-note notif-note">当前浏览器不支持通知。</p>' +
-        '<button class="remote-btn notif-btn" type="button" disabled>浏览器不支持通知</button>';
+        '<div class="set-actions notif-actions">' +
+          '<button class="remote-btn notif-btn" type="button" disabled>浏览器不支持通知</button>' +
+        '</div>';
     } else if (perm === 'denied') {
       badgeCls = 'bad';
       badgeText = '已拒绝';
       body = '<p class="set-note notif-note">浏览器已拒绝通知，请在站点设置里重新允许。</p>' +
-        '<button class="remote-btn notif-btn" type="button" disabled>通知已被拒绝</button>';
+        '<div class="set-actions notif-actions">' +
+          '<button class="remote-btn notif-btn" type="button" disabled>通知已被拒绝</button>' +
+        '</div>';
     } else if (perm === 'granted') {
       badgeCls = 'on';
       badgeText = '已开启';
       body = '<p class="set-note notif-note">审批到达而页面在后台时会弹出系统通知。</p>' +
-        '<button class="remote-btn notif-btn" type="button" data-action="notif-test" data-fk="notif-test"' +
-          (n.busy ? ' disabled' : '') + '>' + (n.busy ? '发送中…' : '发送测试通知') + '</button>';
+        '<div class="set-actions notif-actions">' +
+          '<button class="remote-btn notif-btn" type="button" data-action="notif-test" data-fk="notif-test"' +
+            (n.busy ? ' disabled' : '') + '>' + (n.busy ? '发送中…' : '发送测试通知') + '</button>' +
+        '</div>';
     } else {
       body = '<p class="set-note notif-note">开启后，审批到达而页面在后台时会弹出系统通知。</p>' +
-        '<button class="remote-btn primary notif-btn" type="button" data-action="notif-enable" data-fk="notif-enable"' +
-          (n.busy ? ' disabled' : '') + '>' +
-          (n.busy ? '<span class="spin" aria-hidden="true"></span>请求中…' : '开启通知') + '</button>';
+        '<div class="set-actions notif-actions">' +
+          '<button class="remote-btn primary notif-btn" type="button" data-action="notif-enable" data-fk="notif-enable"' +
+            (n.busy ? ' disabled' : '') + '>' +
+            (n.busy ? '<span class="spin" aria-hidden="true"></span>请求中…' : '开启通知') + '</button>' +
+        '</div>';
     }
     return '<div class="card set-card notif-card" data-notif="' + esc(perm) + '">' +
       '<div class="remote-head"><h3>通知</h3>' +
@@ -3532,8 +3540,11 @@
 
   /* ---------- settings shared cards (desktop page + mobile sheet) ---------- */
   function connectionCardHTML() {
-    return '<div class="card set-card conn-card">' +
-      '<h3>数据连接</h3>' +
+    return '<div class="card set-card conn-card" data-conn="' + (app.connected ? 'on' : 'off') + '">' +
+      '<div class="remote-head"><h3>数据连接</h3>' +
+        '<span class="remote-status ' + (app.connected ? 'on' : 'off') + '"><i aria-hidden="true"></i>' +
+          (app.connected ? '已连接' : '重连中') + '</span>' +
+      '</div>' +
       '<div class="kv"><span>实时流</span><b class="' + (app.connected ? 'ok' : 'warn') + '">' + (app.connected ? '已连接' : '重连中') + '</b></div>' +
       '<div class="kv"><span>数据接口</span><code>./api/state</code></div>' +
       '<div class="kv"><span>最近事件</span><b>' + (app.lastEventAt ? ago(app.lastEventAt) : '—') + '</b></div>' +
@@ -3554,7 +3565,7 @@
       '</div>';
     }).join('') : '<p class="set-note">编队尚未集结，暂无成员别名。</p>';
     return '<div class="card set-card alias-card">' +
-      '<h3>成员别名</h3>' + rows +
+      '<div class="remote-head"><h3>成员别名</h3></div>' + rows +
       '<p class="set-note">双击成员名或点击 ✎ 即可重命名；留空提交会恢复默认称呼。</p>' +
     '</div>';
   }
@@ -3562,7 +3573,7 @@
   function aboutCardHTML() {
     var s = session();
     return '<div class="card set-card about-card">' +
-      '<h3>关于</h3>' +
+      '<div class="remote-head"><h3>关于</h3></div>' +
       '<p class="set-about">Cockpit 是 DeepSeek Harness 的实时指挥台，把编队状态、任务板与活动流收进一屏。</p>' +
       '<div class="kv"><span>版本</span><b>cockpit v' + esc(data().version || '0.1') + '</b></div>' +
       '<div class="kv"><span>适配</span><b>DeepSeek Harness</b></div>' +
@@ -3580,15 +3591,15 @@
       '</div>' +
       '<div class="d-settings-cols">' +
         '<div class="d-settings-col">' +
+          connectionCardHTML() +
           remoteSectionHTML() +
-          capsuleSectionHTML() +
-          notifSectionHTML() +
-          aliasCardHTML() +
+          pwaSectionHTML() +
         '</div>' +
         '<div class="d-settings-col">' +
-          connectionCardHTML() +
+          capsuleSectionHTML() +
           diagnosticsCardHTML() +
-          pwaSectionHTML() +
+          notifSectionHTML() +
+          aliasCardHTML() +
           aboutCardHTML() +
         '</div>' +
       '</div>' +
@@ -3656,11 +3667,11 @@
     return '<section class="m-settings">' +
       '<div class="m-page-head"><h2>设置</h2><span>cockpit v' + esc(data().version || '0.1') + '</span></div>' +
       connectionCardHTML() +
-      diagnosticsCardHTML() +
       remoteSectionHTML() +
-      capsuleSectionHTML() +
-      notifSectionHTML() +
       pwaSectionHTML() +
+      capsuleSectionHTML() +
+      diagnosticsCardHTML() +
+      notifSectionHTML() +
       aliasCardHTML() +
       aboutCardHTML() +
     '</section>';
