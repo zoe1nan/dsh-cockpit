@@ -1,6 +1,6 @@
 {
   "name": "dsh-cockpit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Live command deck for DeepSeek Harness agent teams: team roster, task board, approvals, write actions, desktop capsule, remote access.",
   "type": "module",
   "main": "index.js",
@@ -54,6 +54,7 @@
     }
   },
   "scripts": {
-    "preview": "node scripts/preview.mjs"
+    "preview": "node scripts/preview.mjs",
+    "test": "node --test"
   }
 }

@@ -397,6 +397,7 @@ class Tracker {
         turn: null,
         startedAt: 0,
         lastAt: 0,
+        lastUserAt: 0,
         current: '',
         lastType: '',
       }
@@ -464,6 +465,9 @@ class Tracker {
         this.push({ at, kind: 'message', sessionId: id, text: truncate(line, 90), detail: '' })
       }
     } else if (type === 'user/message') {
+      // Which conversation the user is actually typing in: the capsule uses this
+      // to decide between several concurrently running conversations.
+      state.lastUserAt = Math.max(state.lastUserAt, at)
       state.current = '收到用户消息'
       this.push({ at, kind: 'message', sessionId: id, text: '收到用户消息', detail: '' })
     } else if (type === 'team/task') {
@@ -501,6 +505,70 @@ class Tracker {
   push(entry) {
     this.activity.unshift(entry)
     if (this.activity.length > MAX_ACTIVITY) this.activity.length = MAX_ACTIVITY
+  }
+}
+
+/**
+ * Pick the conversation the desktop capsule follows.
+ *
+ * The capsule is global to the machine while every conversation has its own
+ * session, so the frame cannot just show the team conversation: whenever the
+ * user starts a turn anywhere, the capsule must show that work. A running
+ * conversation therefore wins, and among several running ones the conversation
+ * the user typed in most recently (`lastUserAt`) wins, then the one with the
+ * newest event. Teammate agent sessions are not user conversations, so they
+ * never take the capsule over by themselves. When nothing is running the deck's
+ * active session stays in focus, so an idle capsule keeps showing `待命`
+ * instead of freezing on a finished conversation.
+ *
+ * @param {Array<object>} views session views produced by `readSession()`
+ * @param {Set<string>} conversationIds ids listed by the session store (i.e. conversations)
+ * @param {object|null} active the deck's active session view
+ * @returns {object|null}
+ */
+function pickCapsuleSession(views, conversationIds, active) {
+  const running = views
+    .filter((view) => view.running === true && conversationIds.has(view.id))
+    .sort((a, b) => (b.lastUserAt - a.lastUserAt) || (b.lastAt - a.lastAt))
+  return running[0] ?? active
+}
+
+/**
+ * Fold a state snapshot into the tiny frame the capsule overlay understands.
+ *
+ * The overlay shows the capsule's focus session (the conversation the HUD
+ * follows), not the deck's team view: that is what makes the HUD light up for
+ * every running conversation while it still goes back to 待命 when nothing runs.
+ */
+function capsuleView(state) {
+  const session = state.capsule ?? state.session
+  if (session === null || session === undefined || typeof session !== 'object') return { active: null }
+  const steps = Array.isArray(session.plan?.steps) ? session.plan.steps.slice(0, 12) : []
+  const completed = Number(session.completed) || 0
+  const total = Number(session.total) || 0
+  const running = session.running === true
+  const allDone = total > 0 && completed >= total
+  const status = allDone ? 'done' : total === 0 ? 'noplan' : running ? 'charging' : 'waiting'
+  const current = steps.find((step) => step.status === 'in_progress')
+    ?? steps.find((step) => step.status === 'pending')
+    ?? null
+  return {
+    active: {
+      sessionId: text(session.id),
+      title: text(session.title) || null,
+      status,
+      steps: steps.map((step) => ({
+        text: text(step.text),
+        status: step.status === 'in_progress' || step.status === 'completed' ? step.status : 'pending',
+      })),
+      total,
+      completed,
+      percent: typeof session.percent === 'number' ? session.percent : null,
+      currentStep: current === null ? null : text(current.text),
+      running,
+      elapsedMs: Number(session.elapsedMs) || 0,
+      lastAt: state.now,
+    },
   }
 }
 
@@ -1280,6 +1348,7 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
       turn: live?.turn ?? null,
       startedAt: live?.startedAt ?? 0,
       lastAt: Math.max(live?.lastAt ?? 0, Number(safe(() => session.header?.createdAt, 0)) || 0),
+      lastUserAt: live?.lastUserAt ?? 0,
       current: live?.current ?? '',
       model: prettifyModel(selection),
       steps,
@@ -1330,7 +1399,10 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
       }
     }
 
-    // A session carrying a real team wins; otherwise the busiest/most recent one.
+    // A session carrying a real team wins for the deck; otherwise the busiest/
+    // most recent one. The desktop capsule has its own focus rule: it follows the
+    // conversation that is actually doing work (any conversation, not just the
+    // team's), so the HUD never sits on 待命 while a side conversation runs.
     const teamViews = views.filter((view) => Array.isArray(view.team?.members) && view.team.members.length > 1)
     const ranked = [...views].sort((a, b) => {
       if (a.running !== b.running) return a.running ? -1 : 1
@@ -1345,6 +1417,11 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
       ?? ranked.find((view) => view.running)
       ?? ranked[0]
       ?? null
+
+    // Conversations are exactly the sessions the store lists; the teammate
+    // sessions folded in above only feed the roster.
+    const conversationIds = new Set(sessions.map((session) => safe(() => String(session.id), '')).filter((id) => id !== ''))
+    const capsuleFocus = pickCapsuleSession(views, conversationIds, active)
 
     const memberById = new Map()
     const team = active?.team ?? null
@@ -1463,23 +1540,29 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
       member.focus = paths.length === 0 ? '' : truncate(paths.join(' · '), 44)
     }
 
-    const session = active === null
+    // One projection for every session consumer so `session` (what the deck
+    // shows) and `capsule` (what the desktop HUD follows) can diverge without
+    // duplicating the shape.
+    const projectSession = (view) => view === null
       ? null
       : {
-        id: active.id,
-        title: active.title,
-        running: active.running,
-        turn: active.turn,
-        startedAt: active.startedAt,
-        elapsedMs: active.running && active.startedAt > 0 ? Math.max(0, now - active.startedAt) : 0,
-        percent: active.percent,
-        completed: active.completed,
-        total: active.total,
-        plan: { steps: active.steps },
-        stats: active.stats,
-        model: active.model,
-        live: sessionToAgent.has(active.id) || safe(() => ctx.agents.get(active.id) != null, false),
+        id: view.id,
+        title: view.title,
+        running: view.running,
+        turn: view.turn,
+        startedAt: view.startedAt,
+        elapsedMs: view.running && view.startedAt > 0 ? Math.max(0, now - view.startedAt) : 0,
+        percent: view.percent,
+        completed: view.completed,
+        total: view.total,
+        plan: { steps: view.steps },
+        stats: view.stats,
+        model: view.model,
+        live: sessionToAgent.has(view.id) || safe(() => ctx.agents.get(view.id) != null, false),
       }
+
+    const session = projectSession(active)
+    const capsule = capsuleFocus === active ? session : projectSession(capsuleFocus)
 
     return {
       ok: true,
@@ -1488,6 +1571,7 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
       now,
       mode: 'desktop',
       session,
+      capsule,
       team: { members, tasks },
       sessions: ranked.slice(0, 12).map((view) => ({
         id: view.id,
@@ -1695,7 +1779,9 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
     const state = await buildState(null)
     const members = Array.isArray(state.team?.members) ? state.team.members : []
     const running = members.filter((member) => member.running === true).length
-    const session = state.session
+    // The title/round follow the capsule's focus session (the conversation the
+    // HUD is tracking) while the team counters stay with the deck's team view.
+    const session = state.capsule ?? state.session
     return {
       v: 1,
       at: Date.now(),
@@ -1760,39 +1846,6 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
 
   function legacyOverlaySeen() {
     return safe(() => Date.now() - statSync(LEGACY_HUD_HEARTBEAT).mtimeMs < 20_000, false)
-  }
-
-  /** Fold the deck's state into the tiny frame the overlay understands. */
-  function capsuleView(state) {
-    const session = state.session
-    if (session === null || typeof session !== 'object') return { active: null }
-    const steps = Array.isArray(session.plan?.steps) ? session.plan.steps.slice(0, 12) : []
-    const completed = Number(session.completed) || 0
-    const total = Number(session.total) || 0
-    const running = session.running === true
-    const allDone = total > 0 && completed >= total
-    const status = allDone ? 'done' : total === 0 ? 'noplan' : running ? 'charging' : 'waiting'
-    const current = steps.find((step) => step.status === 'in_progress')
-      ?? steps.find((step) => step.status === 'pending')
-      ?? null
-    return {
-      active: {
-        sessionId: text(session.id),
-        title: text(session.title) || null,
-        status,
-        steps: steps.map((step) => ({
-          text: text(step.text),
-          status: step.status === 'in_progress' || step.status === 'completed' ? step.status : 'pending',
-        })),
-        total,
-        completed,
-        percent: typeof session.percent === 'number' ? session.percent : null,
-        currentStep: current === null ? null : text(current.text),
-        running,
-        elapsedMs: Number(session.elapsedMs) || 0,
-        lastAt: state.now,
-      },
-    }
   }
 
   function writeCapsuleState(state) {
@@ -2417,4 +2470,4 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
 }
 
 /** Test seam; not part of the plugin surface. */
-export const __internals = { Tracker, prettifyModel, toolLabel, toolDetail, isPrivateIp, detectLanIp, sameSecret }
+export const __internals = { Tracker, pickCapsuleSession, capsuleView, prettifyModel, toolLabel, toolDetail, isPrivateIp, detectLanIp, sameSecret }

@@ -31,6 +31,19 @@ object; it never needs to diff.
     "model": "V4 Pro"
   },
 
+  "capsule": {
+    "id": "other-session-id",
+    "title": "修复 HUD 状态同步",
+    "running": true,
+    "elapsedMs": 60000,
+    "percent": null,
+    "completed": 0,
+    "total": 0,
+    "plan": { "steps": [] },
+    "stats": { "turns": 2, "steps": 0, "llmMs": 0, "toolMs": 0, "tokens": 900 },
+    "model": "V4 Pro"
+  },
+
   "team": {
     "members": [
       {
@@ -85,8 +98,13 @@ object; it never needs to diff.
 Field rules:
 
 - `session.percent` is `null` when there is no plan.
-- `session` is the active session: a running turn wins, otherwise the most recent
-  session that carries a plan; `null` when nothing is running and nothing is fresh.
+- `session` is the deck's active session: a session carrying a real team wins,
+  otherwise the busiest/most recent one. `null` when no session is visible.
+- `capsule` has the same shape as `session` and is the session the desktop HUD
+  follows (v1.0.1): any conversation with a running turn wins, most recently
+  used first (`lastUserAt`), then the newest event; teammate agent sessions
+  never take it over. When nothing is running it falls back to `session`, so a
+  finished conversation returns the HUD to `待命` instead of pinning it there.
 - `team.members` always starts with the Lead (`role: "lead"`, `name: "lead"`).
   `phase` is `provisioning | active | failed`. `status` is a client hint:
   `running | idle | provisioning | failed`.
@@ -359,6 +377,12 @@ names or message text:
       approvals: <number>,
       round:{ title, percent|null, done, total, running } | null }
 
+`session` and `round` describe the capsule's focus session (the conversation
+the HUD follows, i.e. `state.capsule`), so the summary follows the conversation
+that is actually working. `team` keeps counting the members of the deck's active
+team, so the badge still reports background agents while a side conversation has
+the capsule's title.
+
 A stale snapshot (older than 120 s) is ignored by the capsule. Settings:
 
 * GET  /cockpit/api/hud-bridge -> { ok, enabled, path, writtenAt, staleMs, bridge }
@@ -404,9 +428,12 @@ separately.
 }
 ```
 
-`active` is `null` when no session carries a plan. The frame is rewritten at
-most every 150 ms (event debounce) and at least every second (elapsed time), and
-only when its content actually changed.
+`active` follows the capsule focus (v1.0.1): the running conversation the user
+used most recently, otherwise the deck's active session. It is `null` only when
+DSH lists no session at all. The overlay therefore shows `进行中` whenever any
+conversation is running and falls back to `待命` once nothing is running. The
+frame is rewritten at most every 150 ms (event debounce) and at least every
+second (elapsed time), and only when its content actually changed.
 
 ### Endpoint
 

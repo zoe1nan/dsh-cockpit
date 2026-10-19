@@ -3,6 +3,26 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 1.0.1 — HUD follows the conversation that is working
+
+The desktop capsule used to follow the deck's team session only, so it sat on
+`待命` while the user worked any other conversation. It now follows any running
+conversation.
+
+### Fixed
+- Desktop capsule and `hud.json` summary follow the conversation that is
+  actually doing work: a running turn wins, the most recently used conversation
+  wins among several, and teammate agent sessions never take the capsule over.
+  When nothing runs the capsule falls back to the deck's active session and
+  returns to `待命` (`state.capsule`, `pickCapsuleSession`)
+- `/cockpit/api/state` exposes `capsule` (same shape as `session`) so external
+  HUDs can mirror the focus; `hud.json` `session`/`round` now describe it while
+  `team` keeps counting the deck's active team
+
+### Tests
+- `npm test` (`node --test`) covers the focus rule, the overlay frame and the
+  per-session `lastUserAt` tracker
+
 ## 1.0.0 — First public release
 
 The first release intended for general use: a complete command deck for

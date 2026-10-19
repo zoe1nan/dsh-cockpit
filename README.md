@@ -33,7 +33,7 @@ DeepSeek Harness 支持多个 agent 并行干活。但当一支编队跑起来�
 - **所有写操作**：同源校验、失败回滚、本地审计（`~/.dsh/cockpit/audit.jsonl`）
 
 ### 桌面胶囊（Windows）
-装一个插件就有桌面悬浮胶囊：液体进度条 + 步骤读数 + 「N 跑 · M 批」徽标；点击展开完整卡片，可一键打开指挥台。胶囊进程由插件托管（自动启动/退出/崩溃重启），设置页可启停。
+装一个插件就有桌面悬浮胶囊：液体进度条 + 步骤读数 + 「N 跑 · M 批」徽标；点击展开完整卡片，可一键打开指挥台。胶囊跟随**任意正在运行的对话**（1.0.1 起：谁在干活就显示谁，多个同时运行时跟随你最近输入的那个，空下来回到「待命」），不再只盯着指挥台会话。胶囊进程由插件托管（自动启动/退出/崩溃重启），设置页可启停。
 
 ![桌面胶囊设置](docs/capsule-settings.png)
 
@@ -158,7 +158,7 @@ docs/           契约与路线图
 - Embedded in the workspace (sidebar entry) or standalone at `/cockpit/`
 - Live roster with real per-agent tokens / actions / ownership, task board with dependencies and write-scope conflict warnings, plan fallback when no shared board exists, human-readable activity stream
 - Approvals gate, queue / steer messages, interrupt a running turn — all click-driven, with a local audit log
-- Built-in desktop capsule (Windows): liquid progress bar + badges, managed by the plugin, toggle in settings
+- Built-in desktop capsule (Windows): liquid progress bar + badges; follows whichever conversation is working (v1.0.1 — most recently used conversation wins among several, returns to standby when idle), managed by the plugin, toggle in settings
 - Phone access: one-time pairing code, optional HTTPS tunnel wizard, Secure cookies, notifications, installable PWA
 - Extension cards: other plugins register read-only JSON cards with actions
 - Local-first: no telemetry; only the explicit actions you take write back to DSH
