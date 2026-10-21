@@ -4,6 +4,8 @@ The plugin serves the whole app under `/cockpit`. The page is static; all live d
 comes from two endpoints. Everything below is JSON over HTTP — no build step, no
 framework.
 
+> 术语：本文属数据契约文档，`deck` / `session` / `capsule` / `hud.json` 为标识符；中文叙述里分别对应用户可见的「指挥台」「会话」「桌面胶囊」「HUD 数据桥」。术语表见 [TERMS.md](TERMS.md)。
+
 v1.2 adds no new fields: the settings hierarchy, the unified feedback tone, the
 folded activity stream and the capsule hover/pending styling are client- or
 overlay-only changes.

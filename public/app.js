@@ -3620,7 +3620,7 @@
     var s = session();
     return '<div class="card set-card about-card">' +
       '<div class="remote-head"><h3>关于</h3></div>' +
-      '<p class="set-about">Cockpit 是 DeepSeek Harness 的实时指挥台，把编队状态、任务板与活动流收进一屏。</p>' +
+      '<p class="set-about">Cockpit 是 DeepSeek Harness 的实时指挥台，把编队状态、任务板与实时流收进一屏。</p>' +
       '<div class="kv"><span>版本</span><b>cockpit v' + esc(data().version || '0.1') + '</b></div>' +
       '<div class="kv"><span>适配</span><b>DeepSeek Harness</b></div>' +
       '<div class="kv"><span>会话</span><b>' + esc(s && s.title || '暂无运行中会话') + '</b></div>' +
