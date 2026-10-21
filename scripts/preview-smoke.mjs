@@ -76,7 +76,7 @@ try {
   const state = await fetchJson('/cockpit/api/state')
   check('state 200', state.status === 200, `HTTP ${state.status}`)
   check('state ok', state.body?.ok === true)
-  check('state version', state.body?.version === '1.2.0', String(state.body?.version))
+  check('state version', state.body?.version === '1.2.1', String(state.body?.version))
   check('state capsule', typeof state.body?.capsule?.id === 'string' && state.body.capsule.id !== '', String(state.body?.capsule?.id))
   check('state session', typeof state.body?.session?.id === 'string' && state.body.session.id !== '', String(state.body?.session?.id))
 

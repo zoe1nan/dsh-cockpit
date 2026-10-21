@@ -1,6 +1,6 @@
 # Cockpit 路线图与优化清单
 
-> 当前版本：**v1.2.0**（已发布 2026-10-19 → [Release v1.2.0](https://github.com/zoe1nan/dsh-cockpit/releases/tag/v1.2.0)）。
+> 当前版本：**v1.2.1**（已发布 2026-10-21 → [Release v1.2.1](https://github.com/zoe1nan/dsh-cockpit/releases/tag/v1.2.1)）。v1.2.1 = D6 启动回放 + D7 实机验收/截图 + D8 术语统一。
 > 发布方式：本机 git 协议不可用，经 GitHub REST API 把 1.0.1 / 1.1.0 / 1.2.0 的提交补放到 `main`（fast-forward，原有 7 stars 与 v1.0.0 Release 均保留）；1.0.1 / 1.1.0 同时补了 tag。
 > CI：`.github/workflows/ci.yml` 已通过网页 UI 补入仓库，首次运行（syntax + tests / powershell parse 两个 job）全部通过。
 > 本版路线图：2026-10-19 重梳理（v1.1.0 落地后，基于代码/文档走查 + 联调 harness 结果）。
@@ -42,7 +42,7 @@
 - B1 `b42d901`：实时流同类工具调用折叠「×N」+ 过滤空 detail（仅视图层，host 事件不丢）
 - D7 实机验收（2026-10-21）：真实页面 CDP 检查 25/25 通过；README 截图重拍（desktop / desktop-dark / remote-settings / capsule-settings / mobile-dark，新增 capsule 与 diagnostics）
 - D8 术语与文案统一（2026-10-21）：`docs/TERMS.md` 术语表 + `scripts/check-terms.mjs`（并入 `npm run check`）
-- D6 启动回放（2026-10-21，v1.2.1 待发布）：插件启动 / 热重载时对每个会话回放最近 50 条事件，恢复 `running` / `lastAt` / `lastUserAt`；回放窗口内没有 `turn/start` 时不会把旧会话误标为运行中（幽灵 running 保护），4 条 `node:test` 覆盖
+- D6 启动回放（2026-10-21，v1.2.1）：插件启动 / 热重载时对每个会话回放最近 50 条事件，恢复 `running` / `lastAt` / `lastUserAt`；回放窗口内没有 `turn/start` 时不会把旧会话误标为运行中（幽灵 running 保护），4 条 `node:test` 覆盖
 
 结论与调整：
 

@@ -3,6 +3,32 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 1.2.1 — Reload-proof HUD
+
+The release that makes a reload boring: the HUD keeps following the conversation
+that is actually working, and the toolchain now guards terminology and the
+Windows capsule in CI.
+
+### Fixed
+
+- State survives a reload: on startup the plugin replays the last 50 events of
+  every watched conversation, so a turn that had already started when the plugin
+  (re)loaded shows up as running from the first poll (≤500 ms) instead of waiting
+  for the next `turn/start`. A replay window without `turn/start` never marks a
+  conversation as running.
+
+### Docs & tests
+
+- `docs/TERMS.md` terminology guide plus `scripts/check-terms.mjs` (5 rules, 6
+  files), wired into `npm run check`.
+- Real-machine acceptance: 25 CDP checks against the live deck; README screenshots
+  refreshed and `capsule` / `diagnostics` images added.
+- `node --test`: 22 tests (4 replay cases).
+
+### Release
+
+- `dsh-cockpit-1.2.1.tgz` + `.sha256` attached to the GitHub Release.
+
 ## 1.2.0 — Day-to-day polish
 
 The "less friction" release: the settings page reads top-down, feedback looks

@@ -1,4 +1,4 @@
-# Cockpit state contract (v1.2)
+# Cockpit state contract (v1.2.1)
 
 The plugin serves the whole app under `/cockpit`. The page is static; all live data
 comes from two endpoints. Everything below is JSON over HTTP — no build step, no
