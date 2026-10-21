@@ -40,12 +40,14 @@
 - A2 `2a46420`：反馈语气/时长统一（ok 2.4 s / warn 3.6 s / error 4.8 s）+ 内联错误统一 `.set-alert` + 失败文案给出下一步
 - A4 `d946acb`：胶囊 hover 高亮 + 待审批琥珀描边（140/180 ms 淡入淡出，点击/拖拽/箭头区不变）
 - B1 `b42d901`：活动流同类工具调用折叠「×N」+ 过滤空 detail（仅视图层，host 事件不丢）
+- D7 实机验收（2026-10-21）：真实页面 CDP 检查 25/25 通过；README 截图重拍（desktop / desktop-dark / remote-settings / capsule-settings / mobile-dark，新增 capsule 与 diagnostics）
 
 结论与调整：
 
 - B2「渲染签名补全」经代码核对**已无必要**：`stateSignature()` 本就覆盖除 `now` / `session.elapsedMs` 外的全部 payload（含 approvals/remote/capsule），未变化时 `applyState` 直接返回、不重绘。进一步优化需把「整树重建」改为局部 patch，属 v1.3 范围，已移出今日清单。
 - 发布时已同步：`package.json` / `mock/state.json` / `README` 安装命令 / `CHANGELOG` 顶部 / `docs/STATE.md` 抬头全部升到 v1.2.0；随后通过 GitHub API 发布（tag `v1.2.0` + Release 附件 `dsh-cockpit-1.2.0.tgz` / `.sha256`）。
-- D6 启动回放、D8 术语文案统一留到发布后的下一个补丁；D7 实机验收改为发布后立刻做（重载插件 → 检查 8 项）。C1 `scripts/release.mjs` 在 token + 网络就绪后随发布一起做。
+- D6 启动回放、D8 术语文案统一留到发布后的下一个补丁（v1.2.1）；C1 `scripts/release.mjs` 在 token + 网络就绪后随发布一起做。
+- D7 实机验收已完成（2026-10-21）：插件重载到 v1.2.0 后，用 headless Edge CDP 直接驱动真实 `/cockpit/` 页面跑 25 项检查（overview 渲染、复制链接、设置页卡头、自检 8 行与徽标、D4 失效链接静默、D5 深链参数消费、分享链接、embed、移动端、无页面错误）全部通过；重拍 README 截图并新增胶囊 / 诊断卡截图。
 
 ---
 
@@ -99,7 +101,7 @@
 | D4 | 失效 `?s=` 静默回落 | 区分「URL 带来的选择」与「用户手选」：来自 URL 的失效选择不弹 toast，直接换自动视图并清 URL | 旧链接打开无 toast；正常切换仍有提示 | 0.1 d |
 | D5 | `?focus=approvals` 健壮化 | 标记保留到「审批列表非空」或 10 s 超时再清；审批出现后仍自动展开+滚动 | 审批稍后才到时深链仍生效；无审批时 10 s 后不残留 | 0.1 d |
 | D6 | 启动回放（可延后） | 插件启动时对每个会话回放最近 ~50 条事件（按序 feed），恢复 running/lastAt；不改变 poll 种子逻辑 | 重载/重启后 2 s 内 HUD 显示运行中会话；无幽灵 running | 0.5 d |
-| D7 | 实机验收 + 截图 | 重载插件后逐项验收 1.1 功能（诊断卡/复制链接/胶囊点击/idle 不重写），补 `docs/` 新截图并在 README 引用 | 验收清单全勾；截图与真机一致 | 0.5 d |
+| D7 | 实机验收 + 截图 ✅ | 已完成（2026-10-21）：重载到 v1.2.0 后用 CDP 驱动真实页面跑 25 项检查；重拍 `desktop` / `desktop-dark` / `remote-settings` / `capsule-settings`（卡面裁切）/ `mobile-dark`，新增 `capsule`（真实胶囊快照）与 `diagnostics`，README 引用更新。审批允许/拒绝、写操作等破坏性项未在真实会话上采样（由 preview harness 覆盖） | 25/25 检查通过；截图入库 | 0.5 d |
 | D8 | 术语与文案统一 | 胶囊/HUD、指挥台/deck、自检/诊断、复制/拷贝等用语表，全文档 + UI 过一遍 | 术语表落文档；`grep` 无混用 | 0.25 d |
 
 ### 2.2 润色 A（体验打磨）
