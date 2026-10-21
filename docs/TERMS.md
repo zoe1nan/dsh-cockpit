@@ -1,4 +1,4 @@
-# 术语与文案约定（v1.2.1）
+# 术语与文案约定（v1.2.2）
 
 > 目的：同一个概念只用一个词。代码标识符（`deck` / `session` / `capsule` / `hud.json` 等）沿用契约名，**不算文案混用**。
 > 自动化：`npm run check` 会运行 `scripts/check-terms.mjs`，扫描 README / CHANGELOG / docs / 前端文案中的禁用词。

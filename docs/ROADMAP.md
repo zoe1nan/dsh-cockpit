@@ -1,6 +1,6 @@
 # Cockpit 路线图与优化清单
 
-> 当前版本：**v1.2.1**（已发布 2026-10-21 → [Release v1.2.1](https://github.com/zoe1nan/dsh-cockpit/releases/tag/v1.2.1)）。v1.2.1 = D6 启动回放 + D7 实机验收/截图 + D8 术语统一。
+> 当前版本：**v1.2.2**（已发布 2026-10-21 → [Release v1.2.2](https://github.com/zoe1nan/dsh-cockpit/releases/tag/v1.2.2)）。v1.2.2 = CI smoke 版本断言修复（不改插件行为）；v1.2.1 = D6 启动回放 + D7 实机验收/截图 + D8 术语统一。
 > 发布方式：本机 git 协议不可用，经 GitHub REST API 把 1.0.1 / 1.1.0 / 1.2.0 的提交补放到 `main`（fast-forward，原有 7 stars 与 v1.0.0 Release 均保留）；1.0.1 / 1.1.0 同时补了 tag。
 > CI：`.github/workflows/ci.yml` 已通过网页 UI 补入仓库，首次运行（syntax + tests / powershell parse 两个 job）全部通过。
 > 本版路线图：2026-10-19 重梳理（v1.1.0 落地后，基于代码/文档走查 + 联调 harness 结果）。

@@ -3,6 +3,23 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 1.2.2 — Green CI on release tags
+
+The v1.2.1 tag shipped with a red CI run: the preview smoke test still pinned the
+`1.2.0` version string. This patch reads the expected version from
+`package.json`, so the guard follows the release instead of the other way around.
+No plugin behavior changes.
+
+### Fixed
+
+- `scripts/preview-smoke.mjs` no longer hardcodes the previous version in the
+  state and diagnostics-report assertions (it reads `package.json`), so the
+  `syntax + tests` job passes on release tags again.
+
+### Release
+
+- `dsh-cockpit-1.2.2.tgz` + `.sha256` attached to the GitHub Release.
+
 ## 1.2.1 — Reload-proof HUD
 
 The release that makes a reload boring: the HUD keeps following the conversation

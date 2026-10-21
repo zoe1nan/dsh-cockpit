@@ -77,7 +77,7 @@ DeepSeek Harness 支持多个 agent 并行干活。但当一支编队跑起来�
 2. 安装到你的 profile 并重启：
 
 ```bash
-dsh plugin --profile <profile> add /path/to/dsh-cockpit-1.2.1.tgz
+dsh plugin --profile <profile> add /path/to/dsh-cockpit-1.2.2.tgz
 ```
 
 3. 重启 DSH 后：侧栏出现「Cockpit 指挥台」，点开即用；桌面胶囊随宿主自动启动（Windows）。
@@ -180,7 +180,7 @@ docs/           契约与路线图
 - Extension cards: other plugins register read-only JSON cards with actions
 - Local-first: no telemetry; only the explicit actions you take write back to DSH
 
-Install: `dsh plugin --profile <profile> add /path/to/dsh-cockpit-1.2.1.tgz`, restart DSH, then open **Cockpit** in the sidebar.
+Install: `dsh plugin --profile <profile> add /path/to/dsh-cockpit-1.2.2.tgz`, restart DSH, then open **Cockpit** in the sidebar.
 
 Windows capsule requires Windows 10 2004+. PWA install and notifications need a secure context (HTTPS or localhost). Backend Web Push is not implemented yet.
 
