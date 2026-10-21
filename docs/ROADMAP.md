@@ -42,12 +42,13 @@
 - B1 `b42d901`：实时流同类工具调用折叠「×N」+ 过滤空 detail（仅视图层，host 事件不丢）
 - D7 实机验收（2026-10-21）：真实页面 CDP 检查 25/25 通过；README 截图重拍（desktop / desktop-dark / remote-settings / capsule-settings / mobile-dark，新增 capsule 与 diagnostics）
 - D8 术语与文案统一（2026-10-21）：`docs/TERMS.md` 术语表 + `scripts/check-terms.mjs`（并入 `npm run check`）
+- D6 启动回放（2026-10-21，v1.2.1 待发布）：插件启动 / 热重载时对每个会话回放最近 50 条事件，恢复 `running` / `lastAt` / `lastUserAt`；回放窗口内没有 `turn/start` 时不会把旧会话误标为运行中（幽灵 running 保护），4 条 `node:test` 覆盖
 
 结论与调整：
 
 - B2「渲染签名补全」经代码核对**已无必要**：`stateSignature()` 本就覆盖除 `now` / `session.elapsedMs` 外的全部 payload（含 approvals/remote/capsule），未变化时 `applyState` 直接返回、不重绘。进一步优化需把「整树重建」改为局部 patch，属 v1.3 范围，已移出今日清单。
 - 发布时已同步：`package.json` / `mock/state.json` / `README` 安装命令 / `CHANGELOG` 顶部 / `docs/STATE.md` 抬头全部升到 v1.2.0；随后通过 GitHub API 发布（tag `v1.2.0` + Release 附件 `dsh-cockpit-1.2.0.tgz` / `.sha256`）。
-- D6 启动回放、D8 术语文案统一留到发布后的下一个补丁（v1.2.1）；C1 `scripts/release.mjs` 在 token + 网络就绪后随发布一起做。
+- D6 启动回放已完成（见上），与 D8 一起进入 v1.2.1 补丁；C1 `scripts/release.mjs` 在 token + 网络就绪后随发布一起做。
 - D7 实机验收已完成（2026-10-21）：插件重载到 v1.2.0 后，用 headless Edge CDP 直接驱动真实 `/cockpit/` 页面跑 25 项检查（overview 渲染、复制链接、设置页卡头、自检 8 行与徽标、D4 失效链接静默、D5 深链参数消费、分享链接、embed、移动端、无页面错误）全部通过；重拍 README 截图并新增胶囊 / 诊断卡截图。
 
 ---
@@ -101,7 +102,7 @@
 | D3 | CI 守卫 | 加 `ps1 BOM` 检查脚本、`pwsh -File` 解析 overlay.ps1、`app.css` 括号平衡检查、preview 冒烟（起 6077 抓 `/cockpit/` 200） | CI 全绿；故意去掉 BOM 时 CI 失败 | 0.5 d |
 | D4 | 失效 `?s=` 静默回落 | 区分「URL 带来的选择」与「用户手选」：来自 URL 的失效选择不弹 toast，直接换自动视图并清 URL | 旧链接打开无 toast；正常切换仍有提示 | 0.1 d |
 | D5 | `?focus=approvals` 健壮化 | 标记保留到「审批列表非空」或 10 s 超时再清；审批出现后仍自动展开+滚动 | 审批稍后才到时深链仍生效；无审批时 10 s 后不残留 | 0.1 d |
-| D6 | 启动回放（可延后） | 插件启动时对每个会话回放最近 ~50 条事件（按序 feed），恢复 running/lastAt；不改变 poll 种子逻辑 | 重载/重启后 2 s 内 HUD 显示运行中会话；无幽灵 running | 0.5 d |
+| D6 | 启动回放 ✅ | 已完成（2026-10-21）：`index.js` 新增 `replayTail()`，启动与热重载时对每个会话回放最近 `REPLAY_EVENTS = 50` 条事件（经同一个 Tracker 折叠，`hydrated` 集合保证每个会话只回放一次，首条实时事件也会触发回放）；回放窗口内无 `turn/start` 则不产生 running（幽灵保护），poll 增量逻辑不变 | `node --test` 22 项全过（新增 `test/replay.test.mjs` 4 条：无边界不 running、turn/start 恢复、turn/end 清除、lastUserAt 恢复）；重载后首个 poll（≤500 ms）即恢复运行中会话 | 0.5 d |
 | D7 | 实机验收 + 截图 ✅ | 已完成（2026-10-21）：重载到 v1.2.0 后用 CDP 驱动真实页面跑 25 项检查；重拍 `desktop` / `desktop-dark` / `remote-settings` / `capsule-settings`（卡面裁切）/ `mobile-dark`，新增 `capsule`（真实胶囊快照）与 `diagnostics`，README 引用更新。审批允许/拒绝、写操作等破坏性项未在真实会话上采样（由 preview harness 覆盖） | 25/25 检查通过；截图入库 | 0.5 d |
 | D8 | 术语与文案统一 ✅ | 已完成（2026-10-21）：`docs/TERMS.md` 术语表 + 文案规则；README/CHANGELOG/ROADMAP/前端文案按表扫一遍（deck→指挥台、活动流→实时流、看板→任务板、对话→会话、拷贝→复制、HUD 桥→HUD 数据桥）；新增 `scripts/check-terms.mjs` 并入 `npm run check` | 术语表落文档；`npm run check` 含术语守卫 | 0.25 d |
 

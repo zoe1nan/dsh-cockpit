@@ -74,6 +74,9 @@ const CAPSULE_MIN_MS = 150
 const CAPSULE_REFRESH_MS = 30_000
 const CAPSULE_TICK_MS = 1000
 const CAPSULE_RESTART_MS = 5000
+/** v1.2.1: how many recent events are replayed per conversation on plugin
+ * start so an in-flight turn survives a reload / DSH restart. */
+const REPLAY_EVENTS = 50
 const CAPSULE_ENABLED_DEFAULT = process.platform === 'win32'
 /** Test seam: never spawn a real overlay window during harness runs. */
 const CAPSULE_DRY_RUN = process.env.DSH_COCKPIT_CAPSULE_DRY_RUN === '1'
@@ -2215,9 +2218,36 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
     return [...out.values()]
   }
 
+  /** v1.2.1: restore a conversation that was already mid-turn when the plugin
+   * (re)loaded. The live hook only sees future events and the poll used to seed
+   * `lastSeq` without replaying history, so an in-flight turn stayed invisible
+   * until the next turn/start. Feeding the tail through the same Tracker folds
+   * turn/start + turn/end pairs in order; a window that opens inside a turn
+   * never contains turn/start, so it cannot fabricate a "ghost running". */
+  function replayTail(session) {
+    const id = safe(() => String(session.id), '')
+    if (id === '') return
+    const end = safe(() => Number(session.seq) || 0, 0)
+    const from = Math.max(0, end - REPLAY_EVENTS)
+    if (end > from) {
+      const events = safe(() => session.snapshotEvents(from, end), null)
+      if (Array.isArray(events)) for (const event of events) tracker.feed(session, event)
+    }
+    lastSeq.set(id, end)
+  }
+
+  // Sessions whose tail has been replayed once; afterwards only deltas are fed.
+  const hydrated = new Set()
+
   ctx.on('session/event', (session, event) => {
+    const id = safe(() => String(session.id), '')
+    if (id !== '' && !hydrated.has(id)) {
+      hydrated.add(id)
+      replayTail(session)
+      return
+    }
     tracker.feed(session, event)
-    lastSeq.set(safe(() => String(session.id), ''), safe(() => Number(session.seq) || 0, 0))
+    lastSeq.set(id, safe(() => Number(session.seq) || 0, 0))
   })
 
   const poll = setInterval(() => {
@@ -2227,7 +2257,8 @@ ${safeMessage === '' ? '' : `<div class="err" style="margin-top:14px">${safeMess
       const known = lastSeq.get(id)
       const end = safe(() => Number(session.seq) || 0, 0)
       if (known === undefined) {
-        lastSeq.set(id, end)
+        hydrated.add(id)
+        replayTail(session)
         continue
       }
       if (end <= known) continue

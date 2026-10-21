@@ -115,6 +115,13 @@ Field rules:
   used first (`lastUserAt`), then the newest event; teammate agent sessions
   never take it over. When nothing is running it falls back to `session`, so a
   finished conversation returns the HUD to `待命` instead of pinning it there.
+- Live state survives a reload (v1.2.1): on startup the plugin replays the last
+  50 events of every watched conversation through the same fold that handles
+  live events. A turn that had already started when the plugin (re)loaded is
+  reported as `running` from the first poll tick (≤500 ms) instead of waiting
+  for the next `turn/start`. A replay window that opens mid-turn contains no
+  `turn/start`, so a stale conversation is never reported as running ("ghost
+  running" guard).
 - `team.members` always starts with the Lead (`role: "lead"`, `name: "lead"`).
   `phase` is `provisioning | active | failed`. `status` is a client hint:
   `running | idle | provisioning | failed`.
