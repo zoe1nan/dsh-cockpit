@@ -11,11 +11,13 @@
  */
 
 import { spawn } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const PKG = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
 const PORT = Number(process.argv[2] || process.env.PREVIEW_PORT || 6199)
 const BASE = `http://127.0.0.1:${PORT}`
 const EXPECTED_CHECKS = ['plugin', 'state', 'stream', 'capsule', 'bridge', 'remote', 'approvals', 'host-api']
@@ -76,7 +78,7 @@ try {
   const state = await fetchJson('/cockpit/api/state')
   check('state 200', state.status === 200, `HTTP ${state.status}`)
   check('state ok', state.body?.ok === true)
-  check('state version', state.body?.version === '1.2.1', String(state.body?.version))
+  check('state version', state.body?.version === PKG.version, String(state.body?.version))
   check('state capsule', typeof state.body?.capsule?.id === 'string' && state.body.capsule.id !== '', String(state.body?.capsule?.id))
   check('state session', typeof state.body?.session?.id === 'string' && state.body.session.id !== '', String(state.body?.session?.id))
 
@@ -103,7 +105,7 @@ try {
   check('diagnostics 8 checks', checks.length === EXPECTED_CHECKS.length, `${checks.length}`)
   check('diagnostics check ids', JSON.stringify(checks.map((item) => item.id)) === JSON.stringify(EXPECTED_CHECKS), checks.map((item) => item.id).join(','))
   check('diagnostics status', ['ok', 'warn', 'fail'].includes(diagnostics.body?.status), String(diagnostics.body?.status))
-  check('diagnostics report', String(diagnostics.body?.report).startsWith(`dsh-cockpit 1.2.0 诊断报告`))
+  check('diagnostics report', String(diagnostics.body?.report).startsWith(`dsh-cockpit ${PKG.version} 诊断报告`))
   check('diagnostics totals', diagnostics.body?.totals?.sessions === sessions.length, String(diagnostics.body?.totals?.sessions))
   check('diagnostics stream warn', checks.find((item) => item.id === 'stream')?.status === 'warn')
   check('diagnostics deck', diagnostics.body?.deck?.id === state.body?.session?.id, String(diagnostics.body?.deck?.id))
